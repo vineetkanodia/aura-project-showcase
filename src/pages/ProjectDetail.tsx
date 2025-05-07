@@ -51,13 +51,16 @@ const ProjectDetail = () => {
       return data as Project;
     },
     retry: false,
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Project not found or couldn't be loaded",
-        variant: "destructive",
-      });
-      navigate('/projects');
+    // Instead of using onError directly, we'll use onSettled and check for errors
+    onSettled: (data, error) => {
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Project not found or couldn't be loaded",
+          variant: "destructive",
+        });
+        navigate('/projects');
+      }
     }
   });
 
