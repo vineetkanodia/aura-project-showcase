@@ -3,37 +3,87 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Lock, ExternalLink, Code, Eye } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { projects } from '@/data/projects';
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+  long_description: string;
+  image: string;
+  tags: string[];
+  category: string;
+  is_premium: boolean;
+  demo_url?: string;
+  repo_url?: string;
+  created_at: string;
+  features: string[];
+}
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [project, setProject] = useState(projects.find(p => p.id === id));
+  const { user } = useAuth();
+  
+  // Fetch project details from Supabase
+  const { data: project, isLoading, error } = useQuery({
+    queryKey: ['project', id],
+    queryFn: async () => {
+      if (!id) throw new Error('Project ID is required');
+      
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      if (!data) throw new Error('Project not found');
+      
+      return data as Project;
+    },
+    retry: false,
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Project not found or couldn't be loaded",
+        variant: "destructive",
+      });
+      navigate('/projects');
+    }
+  });
+
+  // Fetch related projects
+  const { data: relatedProjects } = useQuery({
+    queryKey: ['relatedProjects', project?.category],
+    queryFn: async () => {
+      if (!project) return [];
+      
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('category', project.category)
+        .neq('id', project.id)
+        .limit(3);
+      
+      if (error) throw error;
+      
+      return data as Project[];
+    },
+    enabled: !!project,
+  });
   
   useEffect(() => {
     window.scrollTo(0, 0);
-    
-    // Check if project exists
-    if (!project) {
-      navigate('/projects');
-    }
-    
-    // This is a placeholder for actual authentication checking
-    // In a real implementation, this would use your auth system
-    const checkAuth = () => {
-      const fakeAuth = localStorage.getItem('authenticated');
-      setIsAuthenticated(fakeAuth === 'true');
-    };
-    
-    checkAuth();
-  }, [project, navigate]);
+  }, [id]);
   
   const handleLoginPrompt = () => {
     toast({
@@ -45,7 +95,7 @@ const ProjectDetail = () => {
   };
   
   const handleDownload = () => {
-    if (project?.isPremium && !isAuthenticated) {
+    if (project?.is_premium && !user) {
       handleLoginPrompt();
       return;
     }
@@ -57,7 +107,32 @@ const ProjectDetail = () => {
     });
   };
   
-  if (!project) return null;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="h-screen flex justify-center items-center">
+          <div className="h-16 w-16 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error || !project) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-32 text-center">
+          <h1 className="text-3xl font-bold mb-4">Project Not Found</h1>
+          <p className="mb-8">The project you're looking for doesn't exist or couldn't be loaded.</p>
+          <Button asChild>
+            <Link to="/projects">Back to Projects</Link>
+          </Button>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-background">
@@ -83,7 +158,7 @@ const ProjectDetail = () => {
             >
               <div className="flex items-center gap-4 mb-4">
                 <h1 className="text-3xl md:text-4xl font-bold">{project.title}</h1>
-                {project.isPremium ? (
+                {project.is_premium ? (
                   <Badge variant="outline" className="bg-primary/20 text-primary border-primary">
                     <Lock size={12} className="mr-1" /> Premium
                   </Badge>
@@ -95,7 +170,7 @@ const ProjectDetail = () => {
               </div>
               
               <p className="text-muted-foreground mb-6">
-                {project.longDescription}
+                {project.long_description}
               </p>
               
               <div className="flex flex-wrap gap-2 mb-6">
@@ -107,21 +182,21 @@ const ProjectDetail = () => {
               </div>
               
               <div className="flex flex-wrap gap-4 mb-8">
-                {project.demoUrl && (
+                {project.demo_url && (
                   <Button asChild className="flex items-center gap-2">
-                    <a href={project.demoUrl} target="_blank" rel="noopener noreferrer">
+                    <a href={project.demo_url} target="_blank" rel="noopener noreferrer">
                       <Eye size={16} /> Live Demo
                     </a>
                   </Button>
                 )}
                 
                 <Button 
-                  variant={project.isPremium && !isAuthenticated ? "outline" : "default"}
+                  variant={project.is_premium && !user ? "outline" : "default"}
                   onClick={handleDownload}
-                  className={project.isPremium && !isAuthenticated ? "border-white/10" : ""}
+                  className={project.is_premium && !user ? "border-white/10" : ""}
                 >
                   <div className="flex items-center gap-2">
-                    {project.isPremium && !isAuthenticated ? (
+                    {project.is_premium && !user ? (
                       <>
                         <Lock size={16} /> Get Access
                       </>
@@ -133,9 +208,9 @@ const ProjectDetail = () => {
                   </div>
                 </Button>
                 
-                {project.repoUrl && !project.isPremium && (
+                {project.repo_url && !project.is_premium && (
                   <Button variant="outline" asChild className="border-white/10">
-                    <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                    <a href={project.repo_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                       <ExternalLink size={16} /> View Repository
                     </a>
                   </Button>
@@ -172,7 +247,7 @@ const ProjectDetail = () => {
           </div>
           
           {/* Premium Content Notice */}
-          {project.isPremium && !isAuthenticated && (
+          {project.is_premium && !user && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -202,17 +277,15 @@ const ProjectDetail = () => {
           )}
           
           {/* Related Projects */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <h2 className="text-2xl font-bold mb-6">Related Projects</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects
-                .filter(p => p.id !== project.id && p.category === project.category)
-                .slice(0, 3)
-                .map(relatedProject => (
+          {relatedProjects && relatedProjects.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <h2 className="text-2xl font-bold mb-6">Related Projects</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {relatedProjects.map(relatedProject => (
                   <Link 
                     to={`/projects/${relatedProject.id}`} 
                     key={relatedProject.id} 
@@ -228,7 +301,7 @@ const ProjectDetail = () => {
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-medium">{relatedProject.title}</h3>
-                        {relatedProject.isPremium ? (
+                        {relatedProject.is_premium ? (
                           <Badge variant="outline" className="bg-primary/20 text-primary border-primary h-5">
                             <Lock size={10} className="mr-1" /> Premium
                           </Badge>
@@ -242,8 +315,9 @@ const ProjectDetail = () => {
                     </div>
                   </Link>
                 ))}
-            </div>
-          </motion.div>
+              </div>
+            </motion.div>
+          )}
         </div>
       </main>
       

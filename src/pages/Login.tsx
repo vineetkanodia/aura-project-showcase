@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,65 +9,123 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Github, Mail } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { toast } from "@/components/ui/sonner";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
-  const { toast } = useToast();
+  const { signIn, signUp, user } = useAuth();
+  const { toast: uiToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || '/';
+  
   const [isLoading, setIsLoading] = useState(false);
+  const [loginData, setLoginData] = useState({
+    email: '',
+    password: '',
+    rememberMe: false
+  });
   
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate login process
-    setTimeout(() => {
-      localStorage.setItem('authenticated', 'true');
-      
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
-      
-      setIsLoading(false);
-      navigate('/');
-    }, 1500);
+  const [signupData, setSignupData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    agreeToTerms: false
+  });
+  
+  // Redirect if already logged in
+  if (user) {
+    navigate(from);
+    return null;
+  }
+
+  const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value, type, checked } = e.target;
+    setLoginData(prev => ({
+      ...prev,
+      [id]: type === 'checkbox' ? checked : value
+    }));
   };
   
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value, type, checked } = e.target;
+    setSignupData(prev => ({
+      ...prev,
+      [id]: type === 'checkbox' ? checked : value
+    }));
+  };
+  
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!loginData.email || !loginData.password) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    
     setIsLoading(true);
     
-    // Simulate signup process
-    setTimeout(() => {
-      localStorage.setItem('authenticated', 'true');
-      
-      toast({
+    const { error } = await signIn(loginData.email, loginData.password);
+    
+    setIsLoading(false);
+    
+    if (error) {
+      toast.error(error.message);
+    } else {
+      navigate(from);
+    }
+  };
+  
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!signupData.email || !signupData.password || !signupData.firstName) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    
+    if (!signupData.agreeToTerms) {
+      toast.error("You must agree to the Terms of Service and Privacy Policy");
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    const userData = {
+      username: `${signupData.firstName}${signupData.lastName ? ' ' + signupData.lastName : ''}`,
+    };
+    
+    const { error } = await signUp(signupData.email, signupData.password, userData);
+    
+    setIsLoading(false);
+    
+    if (error) {
+      toast.error(error.message);
+    } else {
+      uiToast({
         title: "Account created",
-        description: "Welcome to our platform!",
+        description: "Please check your email for verification instructions.",
       });
-      
-      setIsLoading(false);
-      navigate('/');
-    }, 1500);
+    }
   };
   
-  const handleOAuthLogin = (provider: string) => {
-    setIsLoading(true);
-    
-    // Simulate OAuth login
-    setTimeout(() => {
-      localStorage.setItem('authenticated', 'true');
+  const handleOAuthLogin = async (provider: 'github' | 'google') => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({ provider });
       
-      toast({
-        title: `${provider} login successful`,
-        description: "Welcome back!",
-      });
-      
+      if (error) {
+        toast.error(error.message);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Authentication failed");
+    } finally {
       setIsLoading(false);
-      navigate('/');
-    }, 1500);
+    }
   };
   
   return (
@@ -94,7 +152,7 @@ const Login = () => {
               <Button 
                 variant="outline" 
                 className="w-full border-white/10" 
-                onClick={() => handleOAuthLogin('GitHub')}
+                onClick={() => handleOAuthLogin('github')}
                 disabled={isLoading}
               >
                 <Github className="mr-2 h-4 w-4" /> Continue with GitHub
@@ -102,7 +160,7 @@ const Login = () => {
               <Button 
                 variant="outline" 
                 className="w-full border-white/10" 
-                onClick={() => handleOAuthLogin('Google')}
+                onClick={() => handleOAuthLogin('google')}
                 disabled={isLoading}
               >
                 <Mail className="mr-2 h-4 w-4" /> Continue with Google
@@ -128,7 +186,14 @@ const Login = () => {
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="name@example.com" required />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="name@example.com" 
+                      value={loginData.email}
+                      onChange={handleLoginChange}
+                      required 
+                    />
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -137,12 +202,23 @@ const Login = () => {
                         Forgot password?
                       </Link>
                     </div>
-                    <Input id="password" type="password" required />
+                    <Input 
+                      id="password" 
+                      type="password" 
+                      value={loginData.password}
+                      onChange={handleLoginChange}
+                      required 
+                    />
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox id="remember" />
+                    <Checkbox 
+                      id="rememberMe" 
+                      checked={loginData.rememberMe}
+                      onCheckedChange={(checked) => 
+                        setLoginData(prev => ({ ...prev, rememberMe: checked === true }))}
+                    />
                     <label
-                      htmlFor="remember"
+                      htmlFor="rememberMe"
                       className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
                       Remember me
@@ -158,26 +234,54 @@ const Login = () => {
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="first-name">First name</Label>
-                      <Input id="first-name" required />
+                      <Label htmlFor="firstName">First name</Label>
+                      <Input 
+                        id="firstName" 
+                        value={signupData.firstName}
+                        onChange={handleSignupChange}
+                        required 
+                      />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="last-name">Last name</Label>
-                      <Input id="last-name" required />
+                      <Label htmlFor="lastName">Last name</Label>
+                      <Input 
+                        id="lastName" 
+                        value={signupData.lastName}
+                        onChange={handleSignupChange}
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
-                    <Input id="signup-email" type="email" placeholder="name@example.com" required />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="name@example.com" 
+                      value={signupData.email}
+                      onChange={handleSignupChange}
+                      required 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
-                    <Input id="signup-password" type="password" required />
+                    <Input 
+                      id="password" 
+                      type="password" 
+                      value={signupData.password}
+                      onChange={handleSignupChange}
+                      required 
+                    />
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox id="terms" required />
+                    <Checkbox 
+                      id="agreeToTerms" 
+                      required
+                      checked={signupData.agreeToTerms}
+                      onCheckedChange={(checked) => 
+                        setSignupData(prev => ({ ...prev, agreeToTerms: checked === true }))}
+                    />
                     <label
-                      htmlFor="terms"
+                      htmlFor="agreeToTerms"
                       className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
                       I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
