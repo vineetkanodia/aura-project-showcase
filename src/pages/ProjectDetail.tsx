@@ -50,19 +50,20 @@ const ProjectDetail = () => {
       
       return data as Project;
     },
-    retry: false,
-    // Instead of using onError directly, we'll use onSettled and check for errors
-    onSettled: (data, error) => {
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Project not found or couldn't be loaded",
-          variant: "destructive",
-        });
-        navigate('/projects');
-      }
-    }
+    retry: false
   });
+
+  // Handle errors with useEffect to navigate away when error occurs
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Project not found or couldn't be loaded",
+        variant: "destructive",
+      });
+      navigate('/projects');
+    }
+  }, [error, toast, navigate]);
 
   // Fetch related projects
   const { data: relatedProjects } = useQuery({
