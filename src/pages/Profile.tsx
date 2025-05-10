@@ -160,7 +160,7 @@ const Profile = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="flex flex-col md:flex-row items-start gap-8">
+            <div className="flex flex-col md:flex-row items-start gap-6">
               {/* Profile Sidebar */}
               <div className="w-full md:w-64 mb-6 md:mb-0">
                 <Card className="bg-secondary/30 backdrop-blur-lg border border-white/10">
@@ -169,7 +169,7 @@ const Profile = () => {
                       <Avatar className="w-24 h-24">
                         <AvatarImage src={avatarUrl || undefined} />
                         <AvatarFallback className="bg-primary/20 text-primary-foreground text-2xl">
-                          {profileData.firstName.charAt(0)}{profileData.lastName.charAt(0)}
+                          {profileData.username ? profileData.username.charAt(0).toUpperCase() : '?'}
                         </AvatarFallback>
                       </Avatar>
                       <label 
@@ -187,8 +187,15 @@ const Profile = () => {
                         disabled={uploading}
                       />
                     </div>
-                    <CardTitle>{profileData.firstName} {profileData.lastName}</CardTitle>
-                    <CardDescription className="truncate max-w-full">{user.email}</CardDescription>
+                    <CardTitle className="text-xl">{profileData.username || 'Username'}</CardTitle>
+                    <CardDescription className="text-sm break-words max-w-full">
+                      <span className="block">
+                        {profileData.firstName} {profileData.lastName}
+                      </span>
+                      <span className="block text-xs mt-1 truncate max-w-[180px] mx-auto">
+                        {user.email}
+                      </span>
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="text-xs text-muted-foreground">
@@ -202,22 +209,22 @@ const Profile = () => {
               <div className="flex-1 w-full">
                 <Card className="bg-secondary/30 backdrop-blur-lg border border-white/10">
                   <Tabs defaultValue="profile" className="w-full">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle>Account Settings</CardTitle>
-                        <TabsList className="grid grid-cols-3">
-                          <TabsTrigger value="profile" className="flex items-center gap-2">
-                            <User className="h-4 w-4" /> Profile
+                    <CardHeader className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                      <CardTitle className="text-xl">Account Settings</CardTitle>
+                      <div className="ml-auto w-full md:w-auto">
+                        <TabsList className="w-full grid grid-cols-3 md:w-auto">
+                          <TabsTrigger value="profile" className="flex items-center gap-2 px-3">
+                            <User className="h-4 w-4 hidden sm:inline" /> Profile
                           </TabsTrigger>
-                          <TabsTrigger value="security" className="flex items-center gap-2">
-                            <Key className="h-4 w-4" /> Security
+                          <TabsTrigger value="security" className="flex items-center gap-2 px-3">
+                            <Key className="h-4 w-4 hidden sm:inline" /> Security
                           </TabsTrigger>
-                          <TabsTrigger value="subscription" className="flex items-center gap-2">
-                            <CreditCard className="h-4 w-4" /> Subscription
+                          <TabsTrigger value="subscription" className="flex items-center gap-2 px-3">
+                            <CreditCard className="h-4 w-4 hidden sm:inline" /> Plan
                           </TabsTrigger>
                         </TabsList>
                       </div>
-                      <CardDescription>
+                      <CardDescription className="hidden md:block">
                         Manage your account settings and preferences
                       </CardDescription>
                     </CardHeader>
@@ -225,6 +232,17 @@ const Profile = () => {
                     <CardContent>
                       <TabsContent value="profile" className="space-y-6">
                         <form onSubmit={handleProfileSubmit} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="username">Username</Label>
+                            <Input 
+                              id="username" 
+                              value={profileData.username}
+                              onChange={handleProfileChange}
+                              placeholder="Your username" 
+                              className="bg-secondary/20"
+                            />
+                          </div>
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="firstName">First Name</Label>
@@ -232,7 +250,8 @@ const Profile = () => {
                                 id="firstName" 
                                 value={profileData.firstName}
                                 onChange={handleProfileChange}
-                                placeholder="Your first name" 
+                                placeholder="Your first name"
+                                className="bg-secondary/20" 
                               />
                             </div>
                             <div className="space-y-2">
@@ -241,19 +260,10 @@ const Profile = () => {
                                 id="lastName" 
                                 value={profileData.lastName}
                                 onChange={handleProfileChange}
-                                placeholder="Your last name" 
+                                placeholder="Your last name"
+                                className="bg-secondary/20" 
                               />
                             </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="username">Username</Label>
-                            <Input 
-                              id="username" 
-                              value={profileData.username}
-                              onChange={handleProfileChange}
-                              placeholder="Your username" 
-                            />
                           </div>
                           
                           <div className="space-y-2">
@@ -292,7 +302,8 @@ const Profile = () => {
                               type="password"
                               value={passwordData.currentPassword}
                               onChange={handlePasswordChange}
-                              placeholder="Enter your current password" 
+                              placeholder="Enter your current password"
+                              className="bg-secondary/20" 
                             />
                           </div>
                           
@@ -303,7 +314,8 @@ const Profile = () => {
                               type="password"
                               value={passwordData.newPassword}
                               onChange={handlePasswordChange}
-                              placeholder="Enter your new password" 
+                              placeholder="Enter your new password"
+                              className="bg-secondary/20" 
                             />
                           </div>
                           
@@ -314,7 +326,8 @@ const Profile = () => {
                               type="password"
                               value={passwordData.confirmPassword}
                               onChange={handlePasswordChange}
-                              placeholder="Confirm your new password" 
+                              placeholder="Confirm your new password"
+                              className="bg-secondary/20" 
                             />
                           </div>
                           
@@ -334,7 +347,7 @@ const Profile = () => {
                       </TabsContent>
                       
                       <TabsContent value="subscription" className="space-y-6">
-                        <div className="text-center py-12">
+                        <div className="text-center py-8 md:py-12">
                           <Shield className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                           <h3 className="text-xl font-medium mb-2">Free Plan</h3>
                           <p className="text-muted-foreground mb-6">You're currently on the free plan</p>

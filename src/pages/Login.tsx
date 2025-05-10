@@ -32,6 +32,7 @@ const Login = () => {
   const [signupData, setSignupData] = useState({
     firstName: '',
     lastName: '',
+    username: '',
     email: '',
     password: '',
     agreeToTerms: false
@@ -83,7 +84,7 @@ const Login = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!signupData.email || !signupData.password || !signupData.firstName) {
+    if (!signupData.email || !signupData.password || !signupData.firstName || !signupData.username) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -96,7 +97,9 @@ const Login = () => {
     setIsLoading(true);
     
     const userData = {
-      username: `${signupData.firstName}${signupData.lastName ? ' ' + signupData.lastName : ''}`,
+      username: signupData.username,
+      first_name: signupData.firstName,
+      last_name: signupData.lastName || '',
     };
     
     const { error } = await signUp(signupData.email, signupData.password, userData);
@@ -252,7 +255,17 @@ const Login = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="username">Username</Label>
+                    <Input 
+                      id="username" 
+                      value={signupData.username}
+                      onChange={handleSignupChange}
+                      required 
+                      placeholder="Choose a unique username"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
                     <Input 
                       id="email" 
                       type="email" 
@@ -263,7 +276,7 @@ const Login = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="password">Password</Label>
                     <Input 
                       id="password" 
                       type="password" 
