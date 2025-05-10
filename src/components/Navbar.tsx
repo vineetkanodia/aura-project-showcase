@@ -47,7 +47,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className={`fixed top-0 w-full z-40 transition-all duration-300 ${isScrolled ? 'py-2 glass-morphism border-b border-white/10' : 'py-4 md:py-6 bg-transparent'}`}>
+    <header className={`fixed top-0 left-0 right-0 w-full z-40 transition-all duration-300 ${isScrolled ? 'py-2 glass-morphism border-b border-white/10' : 'py-4 md:py-6 bg-transparent'}`}>
       <div className="container px-4 mx-auto flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <div className="relative h-8 w-8 overflow-hidden">
@@ -124,91 +124,95 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* Mobile Navigation */}
+      {/* Mobile Navigation - Fixed overlay with better positioning */}
       {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-background/95 backdrop-blur-md flex flex-col items-center justify-center space-y-6 animate-fade-in">
-          <button 
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="absolute top-4 right-4 p-2"
-            aria-label="Close Menu"
-          >
-            <X size={24} className="text-white" />
-          </button>
-          
-          <Link 
-            to="/" 
-            className="text-xl font-medium hover:text-primary transition-colors" 
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Home
-          </Link>
-          <Link 
-            to="/projects" 
-            className="text-xl font-medium hover:text-primary transition-colors"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Projects
-          </Link>
-          <Link 
-            to="/about" 
-            className="text-xl font-medium hover:text-primary transition-colors"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            About
-          </Link>
-          <Link 
-            to="/contact" 
-            className="text-xl font-medium hover:text-primary transition-colors"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Contact
-          </Link>
-          
-          <div className="flex gap-6 mt-6">
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-              <Github size={24} className="text-muted-foreground hover:text-primary transition-colors" />
-            </a>
-            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
-              <Linkedin size={24} className="text-muted-foreground hover:text-primary transition-colors" />
-            </a>
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
-              <Twitter size={24} className="text-muted-foreground hover:text-primary transition-colors" />
-            </a>
-          </div>
-          
-          {user ? (
-            <div className="mt-6 flex flex-col items-center">
-              <Avatar className="h-12 w-12 mb-3">
-                <AvatarImage src={user.user_metadata?.avatar_url || undefined} />
-                <AvatarFallback className="bg-primary/20 text-primary-foreground">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-lg font-medium mb-2">{user.email}</span>
-              <div className="flex flex-col gap-2 w-full mt-2">
-                <Button 
-                  variant="outline" 
-                  className="w-full border-white/10 hover:bg-white/5"
-                  onClick={goToProfile}
-                >
-                  <User className="mr-2 h-5 w-5" /> My Profile
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full border-white/10 hover:bg-white/5"
-                  onClick={handleSignOut}
-                >
-                  <LogOut className="mr-2 h-5 w-5" /> Sign Out
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Button variant="outline" size="lg" className="mt-4 border-white/10 hover:bg-white/5">
-              <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                Login
+        <div className="md:hidden fixed inset-0 z-50 bg-background/95 backdrop-blur-md flex flex-col items-center justify-center">
+          <div className="w-full max-w-sm px-4">
+            <button 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="absolute top-6 right-6 p-2"
+              aria-label="Close Menu"
+            >
+              <X size={24} className="text-white" />
+            </button>
+            
+            <div className="flex flex-col items-center space-y-6 py-8">
+              <Link 
+                to="/" 
+                className="text-xl font-medium hover:text-primary transition-colors" 
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Home
               </Link>
-            </Button>
-          )}
+              <Link 
+                to="/projects" 
+                className="text-xl font-medium hover:text-primary transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Projects
+              </Link>
+              <Link 
+                to="/about" 
+                className="text-xl font-medium hover:text-primary transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                About
+              </Link>
+              <Link 
+                to="/contact" 
+                className="text-xl font-medium hover:text-primary transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Contact
+              </Link>
+              
+              <div className="flex gap-6 mt-6">
+                <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                  <Github size={24} className="text-muted-foreground hover:text-primary transition-colors" />
+                </a>
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                  <Linkedin size={24} className="text-muted-foreground hover:text-primary transition-colors" />
+                </a>
+                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
+                  <Twitter size={24} className="text-muted-foreground hover:text-primary transition-colors" />
+                </a>
+              </div>
+              
+              {user ? (
+                <div className="mt-6 flex flex-col items-center">
+                  <Avatar className="h-12 w-12 mb-3">
+                    <AvatarImage src={user.user_metadata?.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary/20 text-primary-foreground">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-lg font-medium mb-2">{user.email}</span>
+                  <div className="flex flex-col gap-2 w-full mt-2">
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-white/10 hover:bg-white/5"
+                      onClick={goToProfile}
+                    >
+                      <User className="mr-2 h-5 w-5" /> My Profile
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-white/10 hover:bg-white/5"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="mr-2 h-5 w-5" /> Sign Out
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button variant="outline" size="lg" className="mt-4 border-white/10 hover:bg-white/5">
+                  <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                    Login
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </header>
