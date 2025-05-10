@@ -132,7 +132,7 @@ const ForgotPassword = () => {
                 {step === 'newPassword' && 'Create new password'}
               </h1>
               <p className="text-sm text-muted-foreground mt-2">
-                {step === 'email' && 'Enter your email and we'll send you a reset code'}
+                {step === 'email' && "Enter your email and we'll send you a reset code"}
                 {step === 'otp' && 'Enter the 6-digit code sent to your email'}
                 {step === 'newPassword' && 'Your new password must be different from previously used passwords'}
               </p>
