@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Menu, X, Github, Linkedin, Twitter, LogOut, UserRound } from 'lucide-react';
+import { Menu, X, Github, Linkedin, Twitter, LogOut, UserRound, Settings, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,13 +32,18 @@ const Navbar = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    toast.success('Successfully logged out');
+    navigate('/');
   };
 
   // Get user initials for avatar fallback
   const getUserInitials = () => {
     if (!user || !user.email) return '?';
     return user.email.substring(0, 2).toUpperCase();
+  };
+
+  const goToProfile = () => {
+    navigate('/profile');
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -87,13 +93,17 @@ const Navbar = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56 mt-2" align="end" forceMount>
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className="px-3 py-2">
-                    <UserRound className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                  <DropdownMenuItem onClick={goToProfile} className="px-3 py-2 cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>My Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={goToProfile} className="px-3 py-2 cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Account Settings</span>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-500 px-3 py-2" onClick={handleSignOut}>
+                <DropdownMenuItem onClick={handleSignOut} className="text-red-500 px-3 py-2 cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
@@ -175,14 +185,22 @@ const Navbar = () => {
                 </AvatarFallback>
               </Avatar>
               <span className="text-lg font-medium mb-2">{user.email}</span>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="mt-2 border-white/10 hover:bg-white/5"
-                onClick={handleSignOut}
-              >
-                <LogOut className="mr-2 h-5 w-5" /> Sign Out
-              </Button>
+              <div className="flex flex-col gap-2 w-full mt-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full border-white/10 hover:bg-white/5"
+                  onClick={goToProfile}
+                >
+                  <User className="mr-2 h-5 w-5" /> My Profile
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full border-white/10 hover:bg-white/5"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="mr-2 h-5 w-5" /> Sign Out
+                </Button>
+              </div>
             </div>
           ) : (
             <Button variant="outline" size="lg" className="mt-4 border-white/10 hover:bg-white/5">

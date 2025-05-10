@@ -11,6 +11,14 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  updateProfile: (data: Partial<ProfileData>) => Promise<{ error: any }>;
+}
+
+interface ProfileData {
+  username?: string;
+  avatar_url?: string;
+  first_name?: string;
+  last_name?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,17 +29,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Track if this is an initial load to avoid showing toast on page refresh
+    let isInitialLoad = true;
+    
     // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
-        if (event === 'SIGNED_IN') {
-          toast.success('Signed in successfully!');
-        } else if (event === 'SIGNED_OUT') {
-          toast.success('Signed out successfully!');
+        // Only show toasts for actual sign in/out events, not on initial page load
+        if (!isInitialLoad) {
+          if (event === 'SIGNED_IN') {
+            toast.success('Signed in successfully!');
+          } else if (event === 'SIGNED_OUT') {
+            toast.success('Signed out successfully!');
+          }
         }
+        
+        isInitialLoad = false;
       }
     );
 
@@ -40,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setIsLoading(false);
+      isInitialLoad = false; // Mark initial load complete
     });
 
     return () => {
@@ -69,6 +86,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             username: userData.username || email.split('@')[0],
             avatar_url: userData.avatar_url || null,
+            first_name: userData.first_name || '',
+            last_name: userData.last_name || ''
           },
         },
       });
@@ -93,6 +112,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateProfile = async (data: Partial<ProfileData>) => {
+    try {
+      if (!user) return { error: new Error('User not authenticated') };
+      
+      // Update user metadata in auth.users
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          ...data
+        }
+      });
+      
+      if (!error) {
+        toast.success('Profile updated successfully!');
+      }
+      
+      return { error };
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      return { error };
+    }
+  };
+
   const value = {
     session,
     user,
@@ -100,6 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signUp,
     signOut,
+    updateProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
