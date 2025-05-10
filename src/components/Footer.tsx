@@ -1,8 +1,71 @@
 
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Github, Linkedin, Twitter, Mail, Heart } from 'lucide-react';
+import { toast } from '@/components/ui/sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const Footer = () => {
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Email validation function
+  const isValidEmail = (email: string) => {
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return pattern.test(email);
+  };
+
+  // Handle newsletter subscription
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Check if email already exists
+      const { data: existingSubscribers, error: checkError } = await supabase
+        .from('subscribers')
+        .select('email')
+        .eq('email', email)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      if (existingSubscribers) {
+        toast.info('This email is already subscribed to our newsletter');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Insert new subscriber
+      const { error } = await supabase
+        .from('subscribers')
+        .insert({ email });
+
+      if (error) throw error;
+
+      toast.success('Thank you for subscribing to our newsletter!');
+      setEmail('');
+    } catch (error) {
+      console.error('Error subscribing:', error);
+      toast.error('Failed to subscribe. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <footer className="border-t border-white/10 bg-background/50 backdrop-blur-md">
       <div className="container mx-auto px-4 py-12">
@@ -89,17 +152,21 @@ const Footer = () => {
             <p className="text-sm text-muted-foreground mb-4">
               Get notified when I release new projects or write articles about design and development.
             </p>
-            <form className="flex gap-2">
+            <form className="flex gap-2" onSubmit={handleSubscribe}>
               <input
                 type="email"
                 placeholder="Your email"
                 className="flex h-10 rounded-md border border-white/10 bg-secondary/50 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 flex-1"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isSubmitting}
               />
               <button
                 type="submit"
                 className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                disabled={isSubmitting}
               >
-                Subscribe
+                {isSubmitting ? 'Sending...' : 'Subscribe'}
               </button>
             </form>
           </div>

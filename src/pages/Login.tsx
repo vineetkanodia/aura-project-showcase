@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -38,11 +38,15 @@ const Login = () => {
     agreeToTerms: false
   });
   
-  // Redirect if already logged in
-  if (user) {
-    navigate(from);
-    return null;
-  }
+  // Redirect if already logged in - without showing toast
+  useEffect(() => {
+    if (user) {
+      navigate(from, { replace: true });
+    }
+  }, [user, navigate, from]);
+  
+  // If user is already logged in, return null to prevent rendering the component
+  if (user) return null;
 
   const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value, type, checked } = e.target;

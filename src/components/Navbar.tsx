@@ -71,9 +71,10 @@ const Navbar = () => {
 
   return (
     <header 
-      className={`fixed top-0 left-0 right-0 w-full z-40 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 w-full z-40 transition-all duration-500 ${
         isScrolled ? 'py-2 glass-morphism border-b border-white/10' : 'py-4 md:py-6 bg-transparent'
       }`}
+      style={{ maxWidth: '100vw', overflowX: 'hidden' }}
     >
       <div className="container px-4 mx-auto flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
@@ -216,10 +217,10 @@ const Navbar = () => {
         {isMobileMenuOpen && (
           <motion.div 
             className="md:hidden fixed inset-0 z-50 bg-background/95 backdrop-blur-md"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
           >
             <div className="flex flex-col h-full">
               <div className="flex justify-end p-4">

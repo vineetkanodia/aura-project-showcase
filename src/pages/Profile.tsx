@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Upload, User, Shield, CreditCard, Key } from 'lucide-react';
+import { Loader2, Upload, User, Shield, CreditCard, Key, Mail, UserRound, Settings } from 'lucide-react';
 
 const Profile = () => {
   const { user, updateProfile } = useAuth();
@@ -154,7 +154,7 @@ const Profile = () => {
       <Navbar />
       
       <main className="pt-28 pb-16">
-        <div className="container mx-auto px-4 max-w-4xl">
+        <div className="container mx-auto px-4 max-w-5xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -214,7 +214,7 @@ const Profile = () => {
                       <div className="ml-auto w-full md:w-auto">
                         <TabsList className="w-full grid grid-cols-3 md:w-auto">
                           <TabsTrigger value="profile" className="flex items-center gap-2 px-3">
-                            <User className="h-4 w-4 hidden sm:inline" /> Profile
+                            <UserRound className="h-4 w-4 hidden sm:inline" /> Profile
                           </TabsTrigger>
                           <TabsTrigger value="security" className="flex items-center gap-2 px-3">
                             <Key className="h-4 w-4 hidden sm:inline" /> Security
@@ -233,7 +233,9 @@ const Profile = () => {
                       <TabsContent value="profile" className="space-y-6">
                         <form onSubmit={handleProfileSubmit} className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="username">Username</Label>
+                            <Label htmlFor="username" className="flex items-center gap-2">
+                              <UserRound className="h-4 w-4" /> Username
+                            </Label>
                             <Input 
                               id="username" 
                               value={profileData.username}
@@ -245,7 +247,9 @@ const Profile = () => {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label htmlFor="firstName">First Name</Label>
+                              <Label htmlFor="firstName" className="flex items-center gap-2">
+                                <User className="h-4 w-4" /> First Name
+                              </Label>
                               <Input 
                                 id="firstName" 
                                 value={profileData.firstName}
@@ -255,7 +259,9 @@ const Profile = () => {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="lastName">Last Name</Label>
+                              <Label htmlFor="lastName" className="flex items-center gap-2">
+                                <User className="h-4 w-4" /> Last Name
+                              </Label>
                               <Input 
                                 id="lastName" 
                                 value={profileData.lastName}
@@ -267,7 +273,9 @@ const Profile = () => {
                           </div>
                           
                           <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="email" className="flex items-center gap-2">
+                              <Mail className="h-4 w-4" /> Email
+                            </Label>
                             <Input 
                               id="email" 
                               value={user.email}
@@ -296,7 +304,9 @@ const Profile = () => {
                       <TabsContent value="security" className="space-y-6">
                         <form onSubmit={handlePasswordSubmit} className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="currentPassword">Current Password</Label>
+                            <Label htmlFor="currentPassword" className="flex items-center gap-2">
+                              <Key className="h-4 w-4" /> Current Password
+                            </Label>
                             <Input 
                               id="currentPassword" 
                               type="password"
@@ -308,7 +318,9 @@ const Profile = () => {
                           </div>
                           
                           <div className="space-y-2">
-                            <Label htmlFor="newPassword">New Password</Label>
+                            <Label htmlFor="newPassword" className="flex items-center gap-2">
+                              <Key className="h-4 w-4" /> New Password
+                            </Label>
                             <Input 
                               id="newPassword" 
                               type="password"
@@ -320,7 +332,9 @@ const Profile = () => {
                           </div>
                           
                           <div className="space-y-2">
-                            <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                            <Label htmlFor="confirmPassword" className="flex items-center gap-2">
+                              <Key className="h-4 w-4" /> Confirm New Password
+                            </Label>
                             <Input 
                               id="confirmPassword" 
                               type="password"
