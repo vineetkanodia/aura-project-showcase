@@ -20,7 +20,7 @@ import { toast } from '@/components/ui/sonner';
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, signOut, isLoading } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -51,11 +51,14 @@ const Navbar = () => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const handleSignOut = async () => {
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent default behavior
     try {
       await signOut();
+      navigate('/');
     } catch (error) {
       console.error("Sign out failed:", error);
+      toast.error("Failed to sign out. Please try again.");
     }
   };
 
@@ -88,7 +91,7 @@ const Navbar = () => {
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent animate-pulse-glow"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent animate-pulse"></div>
             <div className="absolute inset-[2px] rounded-full bg-background"></div>
             <div className="absolute inset-[4px] rounded-full bg-gradient-to-br from-primary/20 to-accent/20"></div>
           </motion.div>
@@ -190,13 +193,9 @@ const Navbar = () => {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={handleSignOut} 
-                  className="text-red-500 px-3 py-2 cursor-pointer"
-                  disabled={isLoading}
-                >
+                <DropdownMenuItem onClick={handleSignOut} className="text-red-500 px-3 py-2 cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>{isLoading ? "Signing out..." : "Log out"}</span>
+                  <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -236,7 +235,6 @@ const Navbar = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
           >
             <div className="flex flex-col h-full">
               <div className="flex justify-end p-4">
@@ -355,9 +353,8 @@ const Navbar = () => {
                           variant="outline" 
                           className="w-full border-white/10 hover:bg-white/5 dark:border-gray-700 dark:hover:bg-gray-800"
                           onClick={handleSignOut}
-                          disabled={isLoading}
                         >
-                          <LogOut className="mr-2 h-5 w-5" /> {isLoading ? "Signing out..." : "Sign Out"}
+                          <LogOut className="mr-2 h-5 w-5" /> Sign Out
                         </Button>
                       </div>
                     </motion.div>

@@ -35,37 +35,32 @@ const Footer = () => {
       // Check if email already exists
       const { data: existingSubscribers, error: checkError } = await supabase
         .from('subscribers')
-        .select('email')
+        .select('*')
         .eq('email', email)
         .limit(1);
 
       if (checkError) {
-        console.error('Error checking email:', checkError);
         throw checkError;
       }
 
       if (existingSubscribers && existingSubscribers.length > 0) {
         toast.info('This email is already subscribed to our newsletter');
         setIsSubmitting(false);
-        setEmail('');
         return;
       }
 
       // Insert new subscriber
       const { error } = await supabase
         .from('subscribers')
-        .insert([{ email }]);
+        .insert({ email });
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       toast.success('Thank you for subscribing to our newsletter!');
       setEmail('');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error subscribing:', error);
-      toast.error('Failed to subscribe: ' + (error.message || 'Please try again later'));
+      toast.error('Failed to subscribe. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }
