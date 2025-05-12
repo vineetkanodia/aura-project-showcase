@@ -1,8 +1,8 @@
 
-import { Moon, Sun } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { useTheme } from "@/context/ThemeContext";
+import React from "react";
 import { motion } from "framer-motion";
+import { Moon, Sun } from "lucide-react";
+import { useTheme } from "@/context/ThemeContext";
 
 interface ThemeToggleProps {
   className?: string;
@@ -15,20 +15,39 @@ const ThemeToggle = ({ className, showLabel = false }: ThemeToggleProps) => {
   return (
     <div className={`flex items-center gap-2 ${className || ""}`}>
       {showLabel && (
-        <span className="text-sm font-medium mr-2">
+        <span className="text-sm font-medium mr-2 transition-colors">
           {theme === "light" ? "Light" : "Dark"} Mode
         </span>
       )}
       
-      <div className="flex items-center space-x-2">
-        <Sun size={18} className={`${theme === 'light' ? 'text-primary' : 'text-muted-foreground'}`} />
-        <Switch 
-          checked={theme === "dark"} 
-          onCheckedChange={toggleTheme} 
-          aria-label="Toggle dark mode"
-        />
-        <Moon size={18} className={`${theme === 'dark' ? 'text-primary' : 'text-muted-foreground'}`} />
-      </div>
+      <motion.button
+        onClick={toggleTheme}
+        className="relative h-10 w-10 flex items-center justify-center rounded-full hover:bg-secondary/80 transition-colors"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+      >
+        <motion.div
+          initial={false}
+          animate={{ 
+            rotate: theme === "dark" ? 180 : 0,
+            scale: theme === "dark" ? 0.7 : 1
+          }}
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+        >
+          {theme === "light" ? (
+            <Sun 
+              size={22} 
+              className="text-amber-500 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" 
+            />
+          ) : (
+            <Moon 
+              size={22} 
+              className="text-blue-300 drop-shadow-[0_0_8px_rgba(147,197,253,0.5)]" 
+            />
+          )}
+        </motion.div>
+      </motion.button>
     </div>
   );
 };

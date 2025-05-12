@@ -28,37 +28,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [prevAuthState, setPrevAuthState] = useState<string | null>(null);
 
   useEffect(() => {
-    // First set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        // Only show toasts for actual sign in/out events, not on initial page load
-        if (!initialLoad) {
-          if (event === 'SIGNED_IN') {
-            toast.success('Signed in successfully!');
-          } else if (event === 'SIGNED_OUT') {
-            toast.success('Signed out successfully!');
-          }
-        }
-      }
-    );
-
-    // Then check for existing session
+    // First check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
+      setPrevAuthState(currentSession ? 'SIGNED_IN' : 'SIGNED_OUT');
       setIsLoading(false);
       setInitialLoad(false); // Mark initial load complete
     });
 
+    // Then set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        // Only show toasts for actual changes in auth state, not on initial load or redundant events
+        if (!initialLoad && event !== prevAuthState) {
+          if (event === 'SIGNED_IN' && prevAuthState !== 'SIGNED_IN') {
+            toast.success('Signed in successfully!');
+          } else if (event === 'SIGNED_OUT' && prevAuthState !== 'SIGNED_OUT') {
+            toast.success('Signed out successfully!');
+          }
+          setPrevAuthState(event);
+        }
+        
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+      }
+    );
+
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [initialLoad, prevAuthState]);
 
   const signIn = async (email: string, password: string) => {
     try {

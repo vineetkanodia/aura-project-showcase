@@ -51,10 +51,10 @@ const Navbar = () => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const handleSignOut = async (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent default behavior
+  const handleSignOut = async () => {
     try {
       await signOut();
+      toast.success("Logged out successfully");
       navigate('/');
     } catch (error) {
       console.error("Sign out failed:", error);

@@ -214,13 +214,13 @@ const Profile = () => {
                       <div className="ml-auto w-full md:w-auto">
                         <TabsList className="w-full grid grid-cols-3 md:w-auto">
                           <TabsTrigger value="profile" className="flex items-center gap-2 px-3">
-                            <UserRound className="h-4 w-4 hidden sm:inline" /> Profile
+                            <UserRound className="h-4 w-4" /> Profile
                           </TabsTrigger>
                           <TabsTrigger value="security" className="flex items-center gap-2 px-3">
-                            <Key className="h-4 w-4 hidden sm:inline" /> Security
+                            <Key className="h-4 w-4" /> Security
                           </TabsTrigger>
                           <TabsTrigger value="subscription" className="flex items-center gap-2 px-3">
-                            <CreditCard className="h-4 w-4 hidden sm:inline" /> Plan
+                            <CreditCard className="h-4 w-4" /> Plan
                           </TabsTrigger>
                         </TabsList>
                       </div>
