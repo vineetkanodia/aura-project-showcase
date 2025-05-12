@@ -5,7 +5,6 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Menu, X, Github, Linkedin, Twitter, LogOut, UserRound, Settings, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import ThemeToggle from './ThemeToggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +41,6 @@ const Navbar = () => {
     };
 
     window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Call initially to set the correct state
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -51,15 +49,9 @@ const Navbar = () => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const handleSignOut = async (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent default behavior
-    try {
-      await signOut();
-      navigate('/');
-    } catch (error) {
-      console.error("Sign out failed:", error);
-      toast.error("Failed to sign out. Please try again.");
-    }
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
   };
 
   // Get user initials for avatar fallback
@@ -80,7 +72,7 @@ const Navbar = () => {
   return (
     <header 
       className={`fixed top-0 left-0 right-0 w-full z-40 transition-all duration-500 ${
-        isScrolled ? 'py-2 glass-morphism border-b border-white/10 dark:border-gray-800/80' : 'py-4 md:py-6 bg-transparent'
+        isScrolled ? 'py-2 glass-morphism border-b border-white/10' : 'py-4 md:py-6 bg-transparent'
       }`}
       style={{ maxWidth: '100vw', overflowX: 'hidden' }}
     >
@@ -133,9 +125,6 @@ const Navbar = () => {
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
-          {/* Theme Toggle */}
-          <ThemeToggle />
-          
           <div className="flex gap-4">
             <motion.a 
               href="https://github.com" 
@@ -204,7 +193,7 @@ const Navbar = () => {
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
-              <Button variant="outline" size="sm" className="ml-4 border-white/10 hover:bg-white/5 hover:text-primary dark:border-gray-700 dark:hover:bg-gray-800">
+              <Button variant="outline" size="sm" className="ml-4 border-white/10 hover:bg-white/5 hover:text-primary">
                 <Link to="/login">Login</Link>
               </Button>
             </motion.div>
@@ -212,25 +201,22 @@ const Navbar = () => {
         </div>
 
         {/* Mobile Menu Button */}
-        <div className="md:hidden flex items-center gap-2">
-          <ThemeToggle className="mr-2" />
-          <motion.button 
-            className="focus:outline-none"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            whileTap={{ scale: 0.9 }}
-          >
-            {isMobileMenuOpen ? 
-              <X size={24} className="text-foreground" /> : 
-              <Menu size={24} className="text-foreground" />}
-          </motion.button>
-        </div>
+        <motion.button 
+          className="md:hidden focus:outline-none"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          whileTap={{ scale: 0.9 }}
+        >
+          {isMobileMenuOpen ? 
+            <X size={24} className="text-white" /> : 
+            <Menu size={24} className="text-white" />}
+        </motion.button>
       </div>
 
       {/* Mobile Navigation - Fixed overlay with better positioning */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div 
-            className="md:hidden fixed inset-0 z-50 bg-background/95 backdrop-blur-md dark:bg-gray-900/95"
+            className="md:hidden fixed inset-0 z-50 bg-background/95 backdrop-blur-md"
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
@@ -243,7 +229,7 @@ const Navbar = () => {
                   className="p-2"
                   aria-label="Close Menu"
                 >
-                  <X size={24} className="text-foreground" />
+                  <X size={24} className="text-white" />
                 </button>
               </div>
               
@@ -344,14 +330,14 @@ const Navbar = () => {
                       <div className="flex flex-col gap-3 w-full">
                         <Button 
                           variant="outline" 
-                          className="w-full border-white/10 hover:bg-white/5 dark:border-gray-700 dark:hover:bg-gray-800"
+                          className="w-full border-white/10 hover:bg-white/5"
                           onClick={goToProfile}
                         >
                           <User className="mr-2 h-5 w-5" /> My Profile
                         </Button>
                         <Button 
                           variant="outline" 
-                          className="w-full border-white/10 hover:bg-white/5 dark:border-gray-700 dark:hover:bg-gray-800"
+                          className="w-full border-white/10 hover:bg-white/5"
                           onClick={handleSignOut}
                         >
                           <LogOut className="mr-2 h-5 w-5" /> Sign Out
@@ -365,7 +351,7 @@ const Navbar = () => {
                       transition={{ delay: 0.6, duration: 0.3 }}
                       className="mt-6 w-full"
                     >
-                      <Button variant="outline" size="lg" className="w-full border-white/10 hover:bg-white/5 dark:border-gray-700 dark:hover:bg-gray-800">
+                      <Button variant="outline" size="lg" className="w-full border-white/10 hover:bg-white/5">
                         <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
                           Login
                         </Link>

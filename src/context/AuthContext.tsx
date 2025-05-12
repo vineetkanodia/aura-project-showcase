@@ -27,9 +27,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
+    // Track if this is an initial load to avoid showing toast on page refresh
+    let isInitialLoad = true;
+    
     // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
@@ -37,13 +39,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(currentSession?.user ?? null);
         
         // Only show toasts for actual sign in/out events, not on initial page load
-        if (!initialLoad) {
+        if (!isInitialLoad) {
           if (event === 'SIGNED_IN') {
             toast.success('Signed in successfully!');
           } else if (event === 'SIGNED_OUT') {
             toast.success('Signed out successfully!');
           }
         }
+        
+        isInitialLoad = false;
       }
     );
 
@@ -52,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setIsLoading(false);
-      setInitialLoad(false); // Mark initial load complete
+      isInitialLoad = false; // Mark initial load complete
     });
 
     return () => {
@@ -101,14 +105,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('Error signing out:', error);
       toast.error('Error signing out.');
-      throw error; // Re-throw for the calling function to handle
     }
   };
 
