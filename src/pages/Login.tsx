@@ -38,6 +38,13 @@ const Login = () => {
     agreeToTerms: false
   });
   
+  const [errors, setErrors] = useState({
+    username: '',
+    email: '',
+    password: '',
+    terms: ''
+  });
+  
   // Redirect if already logged in - without showing toast
   useEffect(() => {
     if (user) {
@@ -58,6 +65,27 @@ const Login = () => {
   
   const handleSignupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value, type, checked } = e.target;
+    
+    // Clear errors when user types
+    if (id === 'username' || id === 'email' || id === 'password') {
+      setErrors(prev => ({
+        ...prev,
+        [id]: ''
+      }));
+    }
+    
+    // Validate username as user types (no spaces or special characters)
+    if (id === 'username') {
+      const usernameRegex = /^[a-zA-Z0-9_]*$/;
+      if (value && !usernameRegex.test(value)) {
+        setErrors(prev => ({
+          ...prev,
+          username: 'Username can only contain letters, numbers, and underscores'
+        }));
+        return; // Don't update state with invalid username
+      }
+    }
+    
     setSignupData(prev => ({
       ...prev,
       [id]: type === 'checkbox' ? checked : value
@@ -88,13 +116,31 @@ const Login = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Reset errors
+    setErrors({
+      username: '',
+      email: '',
+      password: '',
+      terms: ''
+    });
+    
+    // Validate all fields
+    let hasErrors = false;
+    
     if (!signupData.email || !signupData.password || !signupData.firstName || !signupData.username) {
       toast.error("Please fill in all required fields");
       return;
     }
     
     if (!signupData.agreeToTerms) {
-      toast.error("You must agree to the Terms of Service and Privacy Policy");
+      setErrors(prev => ({
+        ...prev,
+        terms: "You must agree to the Terms of Service and Privacy Policy"
+      }));
+      hasErrors = true;
+    }
+    
+    if (hasErrors) {
       return;
     }
     
@@ -106,12 +152,24 @@ const Login = () => {
       last_name: signupData.lastName || '',
     };
     
-    const { error } = await signUp(signupData.email, signupData.password, userData);
+    const { error, isUsernameError, isEmailError } = await signUp(signupData.email, signupData.password, userData);
     
     setIsLoading(false);
     
     if (error) {
-      toast.error(error.message);
+      if (isUsernameError) {
+        setErrors(prev => ({
+          ...prev,
+          username: error.message
+        }));
+      } else if (isEmailError) {
+        setErrors(prev => ({
+          ...prev,
+          email: error.message
+        }));
+      } else {
+        toast.error(error.message);
+      }
     } else {
       uiToast({
         title: "Account created",
@@ -266,7 +324,11 @@ const Login = () => {
                       onChange={handleSignupChange}
                       required 
                       placeholder="Choose a unique username"
+                      className={errors.username ? "border-red-500" : ""}
                     />
+                    {errors.username && (
+                      <p className="text-sm text-red-500">{errors.username}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
@@ -277,7 +339,11 @@ const Login = () => {
                       value={signupData.email}
                       onChange={handleSignupChange}
                       required 
+                      className={errors.email ? "border-red-500" : ""}
                     />
+                    {errors.email && (
+                      <p className="text-sm text-red-500">{errors.email}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
@@ -287,22 +353,35 @@ const Login = () => {
                       value={signupData.password}
                       onChange={handleSignupChange}
                       required 
+                      className={errors.password ? "border-red-500" : ""}
                     />
+                    {errors.password && (
+                      <p className="text-sm text-red-500">{errors.password}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Password must contain at least one lowercase letter, one uppercase letter, and one number.
+                    </p>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-start space-x-2">
                     <Checkbox 
                       id="agreeToTerms" 
                       required
                       checked={signupData.agreeToTerms}
                       onCheckedChange={(checked) => 
                         setSignupData(prev => ({ ...prev, agreeToTerms: checked === true }))}
+                      className={errors.terms ? "border-red-500" : ""}
                     />
-                    <label
-                      htmlFor="agreeToTerms"
-                      className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
-                    </label>
+                    <div>
+                      <label
+                        htmlFor="agreeToTerms"
+                        className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+                      </label>
+                      {errors.terms && (
+                        <p className="text-xs text-red-500 mt-1">{errors.terms}</p>
+                      )}
+                    </div>
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Creating Account...' : 'Create Account'}

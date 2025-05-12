@@ -9,7 +9,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, userData: any) => Promise<{ error: any, isUsernameError?: boolean, isEmailError?: boolean }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<ProfileData>) => Promise<{ error: any }>;
 }
@@ -23,10 +23,36 @@ interface ProfileData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Username validation function
+const isValidUsername = (username: string): boolean => {
+  // Only allow letters, numbers, and underscores (no spaces or special chars)
+  const usernameRegex = /^[a-zA-Z0-9_]+$/;
+  return usernameRegex.test(username);
+};
+
+// Password validation function with friendly message
+const validatePassword = (password: string): { isValid: boolean, message: string } => {
+  const hasLowercase = /[a-z]/.test(password);
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const isValid = hasLowercase && hasUppercase && hasNumber;
+  
+  if (!isValid) {
+    let message = "Password must include:";
+    if (!hasLowercase) message += " a lowercase letter,";
+    if (!hasUppercase) message += " an uppercase letter,";
+    if (!hasNumber) message += " a number,";
+    return { isValid, message: message.slice(0, -1) }; // Remove trailing comma
+  }
+  
+  return { isValid: true, message: "" };
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   useEffect(() => {
     // Track if this is an initial load to avoid showing toast on page refresh
@@ -57,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentSession?.user ?? null);
       setIsLoading(false);
       isInitialLoad = false; // Mark initial load complete
+      setIsFirstLoad(false); // Mark first session check complete
     });
 
     return () => {
@@ -79,12 +106,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, userData: any) => {
     try {
+      // Validate username format
+      if (!isValidUsername(userData.username)) {
+        return { 
+          error: new Error('Username can only contain letters, numbers, and underscores (no spaces or special characters).'),
+          isUsernameError: true
+        };
+      }
+
+      // Validate password complexity
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        return { error: new Error(passwordValidation.message) };
+      }
+
+      // Check if username already exists
+      const { data: existingUsers, error: fetchError } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', userData.username)
+        .limit(1);
+
+      if (fetchError) {
+        console.error('Error checking username:', fetchError);
+        return { error: fetchError };
+      }
+
+      if (existingUsers && existingUsers.length > 0) {
+        return { 
+          error: new Error('This username is already taken. Please choose another one.'),
+          isUsernameError: true
+        };
+      }
+
+      // Check if email exists
+      const { data: userExists, error: emailCheckError } = await supabase.auth.admin.getUserByEmail(email);
+      if (emailCheckError) {
+        // Since we can't directly check if an email exists (this API call might fail),
+        // We'll proceed with signup and handle any duplicate email errors from the API
+      } else if (userExists) {
+        return { 
+          error: new Error('An account with this email already exists.'),
+          isEmailError: true
+        };
+      }
+
+      // Proceed with signup
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            username: userData.username || email.split('@')[0],
+            username: userData.username,
             avatar_url: userData.avatar_url || null,
             first_name: userData.first_name || '',
             last_name: userData.last_name || ''
@@ -94,6 +167,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (!error) {
         toast.success('Account created! Please check your email for verification.');
+      } else if (error.message.includes('email')) {
+        // Handle duplicate email error from the API
+        return { 
+          error: new Error('An account with this email already exists.'),
+          isEmailError: true
+        };
       }
       
       return { error };
@@ -105,9 +184,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('Error signing out:', error);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error signing out:', error);
+        toast.error('Error signing out: ' + error.message);
+      }
+    } catch (error: any) {
+      console.error('Exception signing out:', error);
       toast.error('Error signing out.');
     }
   };
