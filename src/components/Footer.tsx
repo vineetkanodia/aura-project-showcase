@@ -35,15 +35,15 @@ const Footer = () => {
       // Check if email already exists
       const { data: existingSubscribers, error: checkError } = await supabase
         .from('subscribers')
-        .select('email')
+        .select('*')
         .eq('email', email)
-        .single();
+        .limit(1);
 
-      if (checkError && checkError.code !== 'PGRST116') {
+      if (checkError) {
         throw checkError;
       }
 
-      if (existingSubscribers) {
+      if (existingSubscribers && existingSubscribers.length > 0) {
         toast.info('This email is already subscribed to our newsletter');
         setIsSubmitting(false);
         return;
