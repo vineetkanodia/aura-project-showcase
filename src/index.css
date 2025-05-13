@@ -11,7 +11,7 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 252 80% 60%;
+    --primary: 252 100% 67%;
     --primary-foreground: 0 0% 100%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
@@ -28,7 +28,7 @@
 
     --sidebar-background: 240 10% 96%;
     --sidebar-foreground: 240 10% 3.9%;
-    --sidebar-primary: 252 80% 60%;
+    --sidebar-primary: 252 100% 67%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 3.8% 46.1%;
@@ -68,7 +68,7 @@
   }
 
   * {
-    @apply border-border selection:bg-primary/20 selection:text-primary-foreground;
+    @apply border-border selection:bg-primary/20 selection:text-white;
   }
 
   body {
@@ -100,7 +100,7 @@
   }
   
   .text-gradient {
-    @apply bg-gradient-to-br from-primary via-primary/90 to-primary/70 bg-clip-text text-transparent dark:from-white dark:via-white/90 dark:to-white/70;
+    @apply bg-gradient-to-br from-white via-white/90 to-white/70 bg-clip-text text-transparent;
   }
   
   .accent-gradient {

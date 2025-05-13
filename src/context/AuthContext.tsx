@@ -1,103 +1,89 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
+
+interface AuthContextType {
+  session: Session | null;
+  user: User | null;
+  isLoading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, userData: any) => Promise<{ error: any, isUsernameError?: boolean, isEmailError?: boolean }>;
+  signOut: () => Promise<void>;
+  updateProfile: (data: Partial<ProfileData>) => Promise<{ error: any }>;
+}
 
 interface ProfileData {
   username?: string;
   avatar_url?: string;
-  full_name?: string;
-  bio?: string;
-  first_name?: string; // Added first_name property
-  last_name?: string;  // Added last_name property
+  first_name?: string;
+  last_name?: string;
 }
 
-interface AuthContextProps {
-  user: User | null;
-  session: Session | null;
-  isLoading: boolean;
-  signUp: (params: SignUpParams) => Promise<SignUpResult>;
-  signIn: (params: SignInParams) => Promise<SignInResult>;
-  signOut: () => Promise<void>;
-  forgotPassword: (email: string) => Promise<ForgotPasswordResult>;
-  resetPassword: (password: string) => Promise<ResetPasswordResult>;
-  updateProfile: (data: ProfileData) => Promise<UpdateProfileResult>;
-}
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface SignUpParams {
-  email: string;
-  password: string;
-  username: string;
-}
-
-interface SignUpResult {
-  error?: Error;
-  isPasswordError?: boolean;
-  isUsernameError?: boolean;
-  isEmailError?: boolean;
-}
-
-interface SignInParams {
-  email: string;
-  password: string;
-}
-
-interface SignInResult {
-  error?: Error;
-}
-
-interface ForgotPasswordResult {
-  error?: Error;
-}
-
-interface ResetPasswordResult {
-  error?: Error;
-}
-
-interface UpdateProfileResult {
-  error?: Error;
-}
-
-const AuthContext = createContext<AuthContextProps>({
-  user: null,
-  session: null,
-  isLoading: true,
-  signUp: async () => ({ }),
-  signIn: async () => ({ }),
-  signOut: async () => { },
-  forgotPassword: async () => ({ }),
-  resetPassword: async () => ({ }),
-  updateProfile: async () => ({ }),
-});
-
-export const useAuth = () => {
-  return useContext(AuthContext);
+// Username validation function
+const isValidUsername = (username: string): boolean => {
+  // Only allow letters, numbers, and underscores (no spaces or special chars)
+  const usernameRegex = /^[a-zA-Z0-9_]+$/;
+  return usernameRegex.test(username);
 };
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
+// Password validation function with friendly message
+const validatePassword = (password: string): { isValid: boolean, message: string } => {
+  const hasLowercase = /[a-z]/.test(password);
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const isValid = hasLowercase && hasUppercase && hasNumber;
+  
+  if (!isValid) {
+    let message = "Password must include:";
+    if (!hasLowercase) message += " a lowercase letter,";
+    if (!hasUppercase) message += " an uppercase letter,";
+    if (!hasNumber) message += " a number,";
+    return { isValid, message: message.slice(0, -1) }; // Remove trailing comma
+  }
+  
+  return { isValid: true, message: "" };
+};
 
-export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<User | null>(null);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener first
+    // Track if this is an initial load to avoid showing toast on page refresh
+    let isInitialLoad = true;
+    
+    // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsLoading(false);
+      (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        // Only show toasts for actual sign in/out events, not on initial page load
+        if (!isInitialLoad) {
+          if (event === 'SIGNED_IN') {
+            toast.success('Signed in successfully!');
+          } else if (event === 'SIGNED_OUT') {
+            toast.success('Signed out successfully!');
+          }
+        }
+        
+        isInitialLoad = false;
       }
     );
 
     // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
       setIsLoading(false);
+      isInitialLoad = false; // Mark initial load complete
+      setIsFirstLoad(false); // Mark first session check complete
     });
 
     return () => {
@@ -105,228 +91,140 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
   }, []);
 
-  // Password validation
-  const isPasswordValid = (password: string): boolean => {
-    // Check for at least one lowercase letter
-    const hasLowercase = /[a-z]/.test(password);
-    // Check for at least one uppercase letter
-    const hasUppercase = /[A-Z]/.test(password);
-    // Check for at least one digit
-    const hasDigit = /\d/.test(password);
-    // Check minimum length
-    const hasMinLength = password.length >= 8;
-
-    return hasLowercase && hasUppercase && hasDigit && hasMinLength;
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      return { error };
+    } catch (error) {
+      console.error('Error signing in:', error);
+      return { error };
+    }
   };
 
-  // Username validation
-  const isUsernameValid = (username: string): boolean => {
-    // Check if username contains only alphanumeric characters (no spaces or special chars)
-    return /^[a-zA-Z0-9]+$/.test(username);
-  };
+  const signUp = async (email: string, password: string, userData: any) => {
+    try {
+      // Validate username format
+      if (!isValidUsername(userData.username)) {
+        return { 
+          error: new Error('Username can only contain letters, numbers, and underscores (no spaces or special characters).'),
+          isUsernameError: true
+        };
+      }
 
-  const signUp = async ({ email, password, username }: SignUpParams): Promise<SignUpResult> => {
-    // Validate password
-    if (!isPasswordValid(password)) {
-      return { 
-        error: new Error('Password must be at least 8 characters long and include uppercase letters, lowercase letters, and numbers.'),
-        isPasswordError: true 
-      };
-    }
+      // Validate password complexity
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        return { error: new Error(passwordValidation.message) };
+      }
 
-    // Validate username (alphanumeric only)
-    if (!isUsernameValid(username)) {
-      return { 
-        error: new Error('Username can only contain letters and numbers (no spaces or special characters).'),
-        isUsernameError: true 
-      };
-    }
+      // Check if username already exists
+      const { data: existingUsers, error: fetchError } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', userData.username)
+        .limit(1);
 
-    // Check if username exists in profiles
-    const { data: existingProfiles, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('username', username)
-      .limit(1);
-    
-    if (profileError) {
-      console.error('Error checking username:', profileError);
-    } else if (existingProfiles && existingProfiles.length > 0) {
-      return { 
-        error: new Error('Username is already taken.'),
-        isUsernameError: true
-      };
-    }
+      if (fetchError) {
+        console.error('Error checking username:', fetchError);
+        return { error: fetchError };
+      }
 
-    // Instead of checking if email exists (which requires admin rights),
-    // we'll proceed with signup and handle any duplicate email errors from the API
-    
-    // Proceed with signup
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          username,
+      if (existingUsers && existingUsers.length > 0) {
+        return { 
+          error: new Error('This username is already taken. Please choose another one.'),
+          isUsernameError: true
+        };
+      }
+
+      // Instead of checking if email exists (which requires admin rights),
+      // we'll proceed with signup and handle any duplicate email errors from the API
+      
+      // Proceed with signup
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username: userData.username,
+            avatar_url: userData.avatar_url || null,
+            first_name: userData.first_name || '',
+            last_name: userData.last_name || ''
+          },
         },
-      },
-    });
-
-    if (error) {
-      // Check for duplicate email error
-      if (error.message.includes('email')) {
-        return {
-          error,
+      });
+      
+      if (!error) {
+        toast.success('Account created! Please check your email for verification.');
+      } else if (error.message.includes('email')) {
+        // Handle duplicate email error from the API
+        return { 
+          error: new Error('An account with this email already exists.'),
           isEmailError: true
         };
       }
+      
+      return { error };
+    } catch (error) {
+      console.error('Error signing up:', error);
       return { error };
     }
-
-    return {};
   };
 
-  const signIn = async ({ email, password }: SignInParams): Promise<SignInResult> => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      return { error };
-    }
-
-    return {};
-  };
-
-  const signOut = async (): Promise<void> => {
+  const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error("Sign out error:", error);
-        toast.error("Failed to sign out. Please try again.");
-        throw error;
-      } else {
-        // The onAuthStateChange listener will update the state
-        toast.success("Signed out successfully");
+        console.error('Error signing out:', error);
+        toast.error('Error signing out: ' + error.message);
       }
-    } catch (error) {
-      console.error("Unexpected error during sign out:", error);
-      toast.error("An unexpected error occurred. Please try again.");
+    } catch (error: any) {
+      console.error('Exception signing out:', error);
+      toast.error('Error signing out.');
     }
   };
 
-  const forgotPassword = async (email: string): Promise<ForgotPasswordResult> => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-
-    if (error) {
-      return { error };
-    }
-
-    return {};
-  };
-
-  const resetPassword = async (password: string): Promise<ResetPasswordResult> => {
-    // Validate password
-    if (!isPasswordValid(password)) {
-      return { 
-        error: new Error('Password must be at least 8 characters long and include uppercase letters, lowercase letters, and numbers.') 
-      };
-    }
-
-    const { error } = await supabase.auth.updateUser({
-      password,
-    });
-
-    if (error) {
-      return { error };
-    }
-
-    return {};
-  };
-
-  const updateProfile = async (data: ProfileData): Promise<UpdateProfileResult> => {
-    if (!user) {
-      return { error: new Error('User not authenticated') };
-    }
-
+  const updateProfile = async (data: Partial<ProfileData>) => {
     try {
-      // First, update user metadata in auth.users
-      if (data.full_name || data.first_name || data.last_name) {
-        const { error } = await supabase.auth.updateUser({
-          data: { 
-            full_name: data.full_name,
-            first_name: data.first_name,
-            last_name: data.last_name
-          }
-        });
-        if (error) throw error;
+      if (!user) return { error: new Error('User not authenticated') };
+      
+      // Update user metadata in auth.users
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          ...data
+        }
+      });
+      
+      if (!error) {
+        toast.success('Profile updated successfully!');
       }
       
-      // Then update profile in profiles table
-      const updates = {
-        id: user.id,
-        ...(data.username && { username: data.username }),
-        ...(data.avatar_url && { avatar_url: data.avatar_url }),
-        ...(data.full_name && { full_name: data.full_name }),
-        ...(data.bio && { bio: data.bio }),
-        updated_at: new Date().toISOString(),
-      };
-
-      // Check if username already exists (if changing username)
-      if (data.username) {
-        const { data: existingUsers, error: checkError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('username', data.username)
-          .neq('id', user.id)
-          .limit(1);
-          
-        if (checkError) throw checkError;
-        
-        if (existingUsers && existingUsers.length > 0) {
-          return { error: new Error('Username is already taken') };
-        }
-      }
-
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      // Refresh user session after update
-      const { data: { session: newSession } } = await supabase.auth.getSession();
-      if (newSession) {
-        setSession(newSession);
-        setUser(newSession.user);
-      }
-
-      return {};
-    } catch (error: any) {
-      console.error("Profile update error:", error);
+      return { error };
+    } catch (error) {
+      console.error('Error updating profile:', error);
       return { error };
     }
   };
 
   const value = {
-    user,
     session,
+    user,
     isLoading,
-    signUp,
     signIn,
+    signUp,
     signOut,
-    forgotPassword,
-    resetPassword,
-    updateProfile,
+    updateProfile
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
