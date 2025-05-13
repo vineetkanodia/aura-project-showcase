@@ -1,14 +1,15 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/use-toast';
 
 interface ProfileData {
   username?: string;
   avatar_url?: string;
   full_name?: string;
   bio?: string;
+  first_name?: string; // Added first_name property
+  last_name?: string;  // Added last_name property
 }
 
 interface AuthContextProps {
@@ -252,9 +253,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // First, update user metadata in auth.users
     let userUpdateError;
-    if (data.full_name) {
+    if (data.full_name || data.first_name || data.last_name) {
       const { error } = await supabase.auth.updateUser({
-        data: { full_name: data.full_name }
+        data: { 
+          full_name: data.full_name,
+          first_name: data.first_name,
+          last_name: data.last_name
+        }
       });
       userUpdateError = error;
     }

@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/use-toast';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -80,10 +79,10 @@ const Profile = () => {
       });
       
       if (error) throw error;
-      toast.success('Profile updated successfully');
+      toast.success("Profile updated successfully");
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
+      toast.error("Failed to update profile");
     } finally {
       setIsLoading(false);
     }

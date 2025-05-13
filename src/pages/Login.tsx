@@ -67,26 +67,20 @@ const Login = () => {
       });
 
       if (error) {
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
+        toast.error("Login failed", {
+          description: error.message
         });
         return;
       }
 
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-        variant: "success",
+      toast.success("Login successful", {
+        description: "Welcome back!"
       });
       
       navigate('/');
     } catch (error) {
-      toast({
-        title: "An unexpected error occurred",
-        description: "Please try again later",
-        variant: "destructive",
+      toast.error("An unexpected error occurred", {
+        description: "Please try again later"
       });
     } finally {
       setIsSubmitting(false);
@@ -119,27 +113,21 @@ const Login = () => {
             message: 'This email is already in use',
           });
         } else {
-          toast({
-            title: "Registration failed",
-            description: error.message,
-            variant: "destructive",
+          toast.error("Registration failed", {
+            description: error.message
           });
         }
         return;
       }
 
-      toast({
-        title: "Registration successful",
-        description: "Please check your email to confirm your account",
-        variant: "success",
+      toast.success("Registration successful", {
+        description: "Please check your email to confirm your account"
       });
       
       setIsLogin(true);
     } catch (error) {
-      toast({
-        title: "An unexpected error occurred",
-        description: "Please try again later",
-        variant: "destructive",
+      toast.error("An unexpected error occurred", {
+        description: "Please try again later"
       });
     } finally {
       setIsSubmitting(false);
