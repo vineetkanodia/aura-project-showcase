@@ -139,18 +139,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      // Check if email exists
-      const { data: userExists, error: emailCheckError } = await supabase.auth.admin.getUserByEmail(email);
-      if (emailCheckError) {
-        // Since we can't directly check if an email exists (this API call might fail),
-        // We'll proceed with signup and handle any duplicate email errors from the API
-      } else if (userExists) {
-        return { 
-          error: new Error('An account with this email already exists.'),
-          isEmailError: true
-        };
-      }
-
+      // Instead of checking if email exists (which requires admin rights),
+      // we'll proceed with signup and handle any duplicate email errors from the API
+      
       // Proceed with signup
       const { error } = await supabase.auth.signUp({
         email,
