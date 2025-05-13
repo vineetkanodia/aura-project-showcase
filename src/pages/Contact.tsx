@@ -5,30 +5,41 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useContactForm } from '@/hooks/use-contact-form';
 
 const Contact = () => {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, handleSubmit } = useContactForm();
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+  
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    const success = await handleSubmit(formData);
     
-    // Simulate form submission
-    setTimeout(() => {
-      toast({
-        title: "Message sent!",
-        description: "Thanks for reaching out. I'll get back to you soon.",
+    if (success) {
+      // Reset form fields on success
+      setFormData({
+        name: '',
+        email: '',
+        subject: '',
+        message: ''
       });
-      setIsSubmitting(false);
-      
-      // Reset form
-      (e.target as HTMLFormElement).reset();
-    }, 1500);
+    }
   };
   
   return (
@@ -146,21 +157,40 @@ const Contact = () => {
               className="bg-white/5 border border-white/10 rounded-lg p-8 backdrop-blur-sm"
             >
               <h2 className="text-2xl font-bold mb-6">Send Me a Message</h2>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={onSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="name">Name</Label>
-                    <Input id="name" placeholder="Your name" required />
+                    <Input 
+                      id="name" 
+                      placeholder="Your name" 
+                      required 
+                      value={formData.name}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="Your email" required />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="Your email" 
+                      required
+                      value={formData.email}
+                      onChange={handleChange}
+                    />
                   </div>
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="subject">Subject</Label>
-                  <Input id="subject" placeholder="What's this about?" required />
+                  <Input 
+                    id="subject" 
+                    placeholder="What's this about?" 
+                    required
+                    value={formData.subject}
+                    onChange={handleChange}
+                  />
                 </div>
                 
                 <div className="space-y-2">
@@ -169,7 +199,9 @@ const Contact = () => {
                     id="message" 
                     placeholder="Tell me about your project or inquiry..." 
                     className="min-h-32" 
-                    required 
+                    required
+                    value={formData.message}
+                    onChange={handleChange}
                   />
                 </div>
                 

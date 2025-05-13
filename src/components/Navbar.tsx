@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from '@/components/ui/sonner';
+import { ThemeToggle } from './ThemeToggle';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -125,7 +126,9 @@ const Navbar = () => {
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
-          <div className="flex gap-4">
+          <ThemeToggle />
+          
+          <div className="flex gap-4 ml-4">
             <motion.a 
               href="https://github.com" 
               target="_blank" 
@@ -201,15 +204,18 @@ const Navbar = () => {
         </div>
 
         {/* Mobile Menu Button */}
-        <motion.button 
-          className="md:hidden focus:outline-none"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          whileTap={{ scale: 0.9 }}
-        >
-          {isMobileMenuOpen ? 
-            <X size={24} className="text-white" /> : 
-            <Menu size={24} className="text-white" />}
-        </motion.button>
+        <div className="md:hidden flex items-center gap-2">
+          <ThemeToggle />
+          <motion.button 
+            className="focus:outline-none"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            whileTap={{ scale: 0.9 }}
+          >
+            {isMobileMenuOpen ? 
+              <X size={24} className="text-white" /> : 
+              <Menu size={24} className="text-white" />}
+          </motion.button>
+        </div>
       </div>
 
       {/* Mobile Navigation - Fixed overlay with better positioning */}
