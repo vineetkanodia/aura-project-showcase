@@ -10,7 +10,7 @@ import {
   InputOTPGroup, 
   InputOTPSlot 
 } from "@/components/ui/input-otp";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';

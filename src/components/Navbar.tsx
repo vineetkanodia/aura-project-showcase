@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { ThemeToggle } from './ThemeToggle';
 
 const Navbar = () => {
