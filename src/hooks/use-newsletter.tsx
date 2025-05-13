@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 export const useNewsletter = () => {
   const [email, setEmail] = useState('');
@@ -36,7 +36,10 @@ export const useNewsletter = () => {
         .eq('email', email)
         .limit(1);
 
-      if (checkError) throw checkError;
+      if (checkError) {
+        console.error('Error checking subscriber:', checkError);
+        throw new Error('Error checking if email already exists');
+      }
 
       if (existingSubscribers && existingSubscribers.length > 0) {
         toast.info('This email is already subscribed to our newsletter');
@@ -45,11 +48,14 @@ export const useNewsletter = () => {
       }
 
       // Insert new subscriber
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from('subscribers')
         .insert({ email });
 
-      if (error) throw error;
+      if (insertError) {
+        console.error('Error inserting subscriber:', insertError);
+        throw new Error('Error subscribing to newsletter');
+      }
 
       toast.success('Thank you for subscribing to our newsletter!');
       setEmail('');

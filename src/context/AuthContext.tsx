@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 interface ProfileData {
   username?: string;
@@ -203,8 +203,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        toast.error("Failed to sign out. Please try again.");
         console.error("Sign out error:", error);
+        toast.error("Failed to sign out. Please try again.");
+        throw error;
       } else {
         // The onAuthStateChange listener will update the state
         toast.success("Signed out successfully");
@@ -251,68 +252,64 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return { error: new Error('User not authenticated') };
     }
 
-    // First, update user metadata in auth.users
-    let userUpdateError;
-    if (data.full_name || data.first_name || data.last_name) {
-      const { error } = await supabase.auth.updateUser({
-        data: { 
-          full_name: data.full_name,
-          first_name: data.first_name,
-          last_name: data.last_name
-        }
-      });
-      userUpdateError = error;
-    }
-
-    if (userUpdateError) {
-      return { error: userUpdateError };
-    }
-    
-    // Then update profile in profiles table
-    const updates = {
-      id: user.id,
-      ...(data.username && { username: data.username }),
-      ...(data.avatar_url && { avatar_url: data.avatar_url }),
-      ...(data.full_name && { full_name: data.full_name }),
-      ...(data.bio && { bio: data.bio }),
-      updated_at: new Date().toISOString(),
-    };
-
-    // Check if username already exists (if changing username)
-    if (data.username) {
-      const { data: existingUsers, error: checkError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('username', data.username)
-        .neq('id', user.id)
-        .limit(1);
-        
-      if (checkError) {
-        return { error: checkError };
+    try {
+      // First, update user metadata in auth.users
+      if (data.full_name || data.first_name || data.last_name) {
+        const { error } = await supabase.auth.updateUser({
+          data: { 
+            full_name: data.full_name,
+            first_name: data.first_name,
+            last_name: data.last_name
+          }
+        });
+        if (error) throw error;
       }
       
-      if (existingUsers && existingUsers.length > 0) {
-        return { error: new Error('Username is already taken') };
+      // Then update profile in profiles table
+      const updates = {
+        id: user.id,
+        ...(data.username && { username: data.username }),
+        ...(data.avatar_url && { avatar_url: data.avatar_url }),
+        ...(data.full_name && { full_name: data.full_name }),
+        ...(data.bio && { bio: data.bio }),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Check if username already exists (if changing username)
+      if (data.username) {
+        const { data: existingUsers, error: checkError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', data.username)
+          .neq('id', user.id)
+          .limit(1);
+          
+        if (checkError) throw checkError;
+        
+        if (existingUsers && existingUsers.length > 0) {
+          return { error: new Error('Username is already taken') };
+        }
       }
-    }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', user.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
 
-    if (error) {
+      if (error) throw error;
+
+      // Refresh user session after update
+      const { data: { session: newSession } } = await supabase.auth.getSession();
+      if (newSession) {
+        setSession(newSession);
+        setUser(newSession.user);
+      }
+
+      return {};
+    } catch (error: any) {
+      console.error("Profile update error:", error);
       return { error };
     }
-
-    // Refresh user session after update
-    const { data: { session: newSession } } = await supabase.auth.getSession();
-    if (newSession) {
-      setSession(newSession);
-      setUser(newSession.user);
-    }
-
-    return {};
   };
 
   const value = {
