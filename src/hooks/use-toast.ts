@@ -1,6 +1,6 @@
 
 import * as React from "react"
-import { useToast as useToastSonner } from "sonner"
+import { toast as sonnerToast } from "sonner"
 
 interface ToastProps {
   title?: string
@@ -13,33 +13,33 @@ export function useToast() {
   const toast = (props: ToastProps) => {
     // Map variant to proper sonner toast type
     if (props.variant === "destructive") {
-      useToastSonner.error(props.title, { description: props.description });
+      sonnerToast.error(props.title, { description: props.description });
     } else if (props.variant === "success") {
-      useToastSonner.success(props.title, { description: props.description });
+      sonnerToast.success(props.title, { description: props.description });
     } else if (props.variant === "warning") {
-      useToastSonner.warning(props.title, { description: props.description });
+      sonnerToast.warning(props.title, { description: props.description });
     } else if (props.variant === "info") {
-      useToastSonner.info(props.title, { description: props.description });
+      sonnerToast.info(props.title, { description: props.description });
     } else {
-      useToastSonner(props.title, { description: props.description });
+      sonnerToast(props.title, { description: props.description });
     }
   };
 
   // Special toast variants for ease of use
   toast.error = (title: string, description?: string) => {
-    useToastSonner.error(title, { description });
+    sonnerToast.error(title, { description });
   };
   
   toast.success = (title: string, description?: string) => {
-    useToastSonner.success(title, { description });
+    sonnerToast.success(title, { description });
   };
   
   toast.warning = (title: string, description?: string) => {
-    useToastSonner.warning(title, { description });
+    sonnerToast.warning(title, { description });
   };
   
   toast.info = (title: string, description?: string) => {
-    useToastSonner.info(title, { description });
+    sonnerToast.info(title, { description });
   };
 
   return {

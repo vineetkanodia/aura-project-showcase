@@ -4,6 +4,13 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 
+interface ProfileData {
+  username?: string;
+  avatar_url?: string;
+  full_name?: string;
+  bio?: string;
+}
+
 interface AuthContextProps {
   user: User | null;
   session: Session | null;
@@ -13,6 +20,7 @@ interface AuthContextProps {
   signOut: () => Promise<void>;
   forgotPassword: (email: string) => Promise<ForgotPasswordResult>;
   resetPassword: (password: string) => Promise<ResetPasswordResult>;
+  updateProfile: (data: ProfileData) => Promise<UpdateProfileResult>;
 }
 
 interface SignUpParams {
@@ -45,6 +53,10 @@ interface ResetPasswordResult {
   error?: Error;
 }
 
+interface UpdateProfileResult {
+  error?: Error;
+}
+
 const AuthContext = createContext<AuthContextProps>({
   user: null,
   session: null,
@@ -54,6 +66,7 @@ const AuthContext = createContext<AuthContextProps>({
   signOut: async () => { },
   forgotPassword: async () => ({ }),
   resetPassword: async () => ({ }),
+  updateProfile: async () => ({ }),
 });
 
 export const useAuth = () => {
@@ -232,6 +245,71 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return {};
   };
 
+  const updateProfile = async (data: ProfileData): Promise<UpdateProfileResult> => {
+    if (!user) {
+      return { error: new Error('User not authenticated') };
+    }
+
+    // First, update user metadata in auth.users
+    let userUpdateError;
+    if (data.full_name) {
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: data.full_name }
+      });
+      userUpdateError = error;
+    }
+
+    if (userUpdateError) {
+      return { error: userUpdateError };
+    }
+    
+    // Then update profile in profiles table
+    const updates = {
+      id: user.id,
+      ...(data.username && { username: data.username }),
+      ...(data.avatar_url && { avatar_url: data.avatar_url }),
+      ...(data.full_name && { full_name: data.full_name }),
+      ...(data.bio && { bio: data.bio }),
+      updated_at: new Date().toISOString(),
+    };
+
+    // Check if username already exists (if changing username)
+    if (data.username) {
+      const { data: existingUsers, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', data.username)
+        .neq('id', user.id)
+        .limit(1);
+        
+      if (checkError) {
+        return { error: checkError };
+      }
+      
+      if (existingUsers && existingUsers.length > 0) {
+        return { error: new Error('Username is already taken') };
+      }
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', user.id);
+
+    if (error) {
+      return { error };
+    }
+
+    // Refresh user session after update
+    const { data: { session: newSession } } = await supabase.auth.getSession();
+    if (newSession) {
+      setSession(newSession);
+      setUser(newSession.user);
+    }
+
+    return {};
+  };
+
   const value = {
     user,
     session,
@@ -241,6 +319,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signOut,
     forgotPassword,
     resetPassword,
+    updateProfile,
   };
 
   return (
