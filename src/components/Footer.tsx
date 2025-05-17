@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Github, Linkedin, Twitter, Mail, Heart } from 'lucide-react';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 const Footer = () => {
@@ -40,7 +40,10 @@ const Footer = () => {
         .limit(1);
 
       if (checkError) {
-        throw checkError;
+        console.error('Error checking subscription:', checkError);
+        toast.error('Failed to subscribe. Please try again later.');
+        setIsSubmitting(false);
+        return;
       }
 
       if (existingSubscribers && existingSubscribers.length > 0) {
@@ -54,7 +57,12 @@ const Footer = () => {
         .from('subscribers')
         .insert({ email });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error adding subscription:', error);
+        toast.error('Failed to subscribe. Please try again later.');
+        setIsSubmitting(false);
+        return;
+      }
 
       toast.success('Thank you for subscribing to our newsletter!');
       setEmail('');

@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   session: Session | null;
@@ -175,14 +175,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signOut();
+      
       if (error) {
         console.error('Error signing out:', error);
-        toast.error('Error signing out: ' + error.message);
+        toast.error(`Error signing out: ${error.message}`);
       }
     } catch (error: any) {
       console.error('Exception signing out:', error);
-      toast.error('Error signing out.');
+      toast.error('Error signing out. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -197,13 +201,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       
-      if (!error) {
-        toast.success('Profile updated successfully!');
+      if (error) {
+        console.error('Error updating profile:', error);
+        toast.error('Failed to update profile. Please try again.');
+        return { error };
       }
       
-      return { error };
+      toast.success('Profile updated successfully!');
+      return { error: null };
+      
     } catch (error) {
       console.error('Error updating profile:', error);
+      toast.error('Failed to update profile. Please try again.');
       return { error };
     }
   };

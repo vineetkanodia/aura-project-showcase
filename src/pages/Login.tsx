@@ -76,6 +76,7 @@ const Login = () => {
     
     // Validate username as user types (no spaces or special characters)
     if (id === 'username') {
+      // This regex only allows letters, numbers, and underscores (no spaces)
       const usernameRegex = /^[a-zA-Z0-9_]*$/;
       if (value && !usernameRegex.test(value)) {
         setErrors(prev => ({
