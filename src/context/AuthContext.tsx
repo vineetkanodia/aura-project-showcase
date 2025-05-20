@@ -54,41 +54,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   useEffect(() => {
-    // Track if this is an initial load to avoid showing toast on page refresh
-    let isInitialLoad = true;
+    // First check for existing session silently (without toasts)
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setIsLoading(false);
+      setIsFirstLoad(false); // Mark first session check complete
+    });
     
-    // First set up auth state listener
+    // Then set up auth state listener with toasts only for actual events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+        // Only update state if it's actually different to avoid loops
+        if (JSON.stringify(session) !== JSON.stringify(currentSession)) {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+        }
         
-        // Only show toasts for actual sign in/out events, not on initial page load
-        if (!isInitialLoad) {
+        // Only show toasts for actual sign in/out events, not initial page load
+        // and not for session refreshes
+        if (!isFirstLoad && event !== 'TOKEN_REFRESHED') {
           if (event === 'SIGNED_IN') {
             toast.success('Signed in successfully!');
           } else if (event === 'SIGNED_OUT') {
             toast.success('Signed out successfully!');
           }
         }
-        
-        isInitialLoad = false;
       }
     );
-
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setIsLoading(false);
-      isInitialLoad = false; // Mark initial load complete
-      setIsFirstLoad(false); // Mark first session check complete
-    });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, []); // Keep dependencies empty to run only once
 
   const signIn = async (email: string, password: string) => {
     try {

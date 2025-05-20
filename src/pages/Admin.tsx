@@ -88,7 +88,7 @@ const AdminPage = () => {
   });
 
   // Fetch users data
-  const { data: users, isLoading: isLoadingUsers } = useQuery({
+  const { data: users, isLoading: isLoadingUsers, refetch: refetchUsers } = useQuery({
     queryKey: ['adminUsers'],
     queryFn: async () => {
       const { data: profiles, error: profileError } = await supabase
@@ -96,9 +96,6 @@ const AdminPage = () => {
         .select('*');
       
       if (profileError) throw profileError;
-      
-      // Get user details from auth (would require admin role in real app)
-      // This is a simplified version for demo purposes
       
       // Get user subscriptions
       const { data: subscriptions, error: subError } = await supabase
@@ -210,6 +207,7 @@ const AdminPage = () => {
       }
       
       toast.success('User role updated successfully');
+      refetchUsers(); // Refresh the users list
     } catch (error) {
       console.error('Error updating role:', error);
       toast.error('Failed to update user role');
@@ -228,6 +226,7 @@ const AdminPage = () => {
       if (error) throw error;
       
       toast.success('User deleted successfully');
+      refetchUsers(); // Refresh the users list
     } catch (error) {
       console.error('Error deleting user:', error);
       toast.error('Failed to delete user');
@@ -322,7 +321,7 @@ const AdminPage = () => {
           </div>
           
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="grid grid-cols-4">
+            <TabsList className="grid grid-cols-4 w-full max-w-md">
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="plans">Plans</TabsTrigger>
@@ -398,6 +397,11 @@ const AdminPage = () => {
                                   ? `Subscribed to ${user.subscription.plan.name} plan` 
                                   : 'Free account'}
                               </div>
+                              {user.role === 'admin' && (
+                                <span className="inline-flex items-center rounded-full bg-primary/20 px-2 py-1 text-xs font-medium text-primary mt-1">
+                                  Admin
+                                </span>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -413,11 +417,16 @@ const AdminPage = () => {
             {/* Users Tab */}
             <TabsContent value="users">
               <Card>
-                <CardHeader>
-                  <CardTitle>User Management</CardTitle>
-                  <CardDescription>
-                    View, edit and manage user accounts
-                  </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>User Management</CardTitle>
+                    <CardDescription>
+                      View, edit and manage user accounts
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => refetchUsers()} variant="outline" size="sm">
+                    Refresh Users
+                  </Button>
                 </CardHeader>
                 <CardContent>
                   {isLoadingUsers ? (

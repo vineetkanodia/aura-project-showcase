@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -78,7 +79,6 @@ const Navbar = () => {
       className={`fixed top-0 left-0 right-0 w-full z-40 transition-all duration-500 ${
         isScrolled ? 'py-2 glass-morphism border-b border-white/10' : 'py-4 md:py-6 bg-transparent'
       }`}
-      style={{ maxWidth: '100vw', overflowX: 'hidden' }}
     >
       <div className="container px-4 mx-auto flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
@@ -231,6 +231,7 @@ const Navbar = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            style={{ top: 0, maxWidth: '100%', overflowX: 'hidden' }}
           >
             <div className="flex flex-col h-full">
               {/* Header with logo and close button */}
