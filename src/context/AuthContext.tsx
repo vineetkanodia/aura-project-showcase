@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -193,6 +192,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (data: Partial<ProfileData>) => {
     try {
       if (!user) return { error: new Error('User not authenticated') };
+      
+      // Validate username if it's being updated
+      if (data.username) {
+        if (!isValidUsername(data.username)) {
+          toast.error('Username can only contain letters, numbers, and underscores (no spaces or special characters).');
+          return { error: new Error('Invalid username format') };
+        }
+        
+        // Check if username already exists (but isn't the current user's username)
+        const { data: existingUsers, error: fetchError } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('username', data.username)
+          .neq('id', user.id)
+          .limit(1);
+
+        if (fetchError) {
+          console.error('Error checking username:', fetchError);
+          return { error: fetchError };
+        }
+
+        if (existingUsers && existingUsers.length > 0) {
+          toast.error('This username is already taken. Please choose another one.');
+          return { error: new Error('Username already taken') };
+        }
+      }
       
       // Update user metadata in auth.users
       const { error } = await supabase.auth.updateUser({
