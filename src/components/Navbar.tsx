@@ -74,6 +74,32 @@ const Navbar = () => {
     setIsMobileMenuOpen(false);
   };
 
+  // Check if user is admin
+  const checkIsAdmin = async () => {
+    try {
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user?.id)
+        .single();
+      
+      return roles?.role === 'admin';
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      return false;
+    }
+  };
+
+  const goToAdmin = async () => {
+    const isAdmin = await checkIsAdmin();
+    if (isAdmin) {
+      navigate('/admin');
+      setIsMobileMenuOpen(false);
+    } else {
+      toast.error('You do not have admin access');
+    }
+  };
+
   return (
     <header 
       className={`fixed top-0 left-0 right-0 w-full z-40 transition-all duration-500 ${
@@ -190,6 +216,10 @@ const Navbar = () => {
                     <Settings className="mr-2 h-4 w-4" />
                     <span>My Subscription</span>
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={goToAdmin} className="px-3 py-2 cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Admin Dashboard</span>
+                  </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-red-500 px-3 py-2 cursor-pointer">
@@ -222,18 +252,18 @@ const Navbar = () => {
         </motion.button>
       </div>
 
-      {/* Mobile Navigation - Improved Design */}
+      {/* Mobile Navigation - Fixed overflow issues */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div 
-            className="md:hidden fixed inset-0 z-50 bg-gradient-to-b from-background to-background/95 backdrop-blur-md"
+            className="md:hidden fixed inset-0 z-50 bg-gradient-to-b from-background to-background/95 backdrop-blur-md overflow-hidden"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            style={{ top: 0, maxWidth: '100%', overflowX: 'hidden' }}
+            style={{ top: 0, height: '100%', width: '100%', overflowY: 'auto', overflowX: 'hidden' }}
           >
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full max-w-full">
               {/* Header with logo and close button */}
               <div className="flex items-center justify-between p-4 border-b border-white/10">
                 <Link to="/" className="flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
@@ -319,6 +349,14 @@ const Navbar = () => {
                     >
                       <Settings className="mr-2 h-5 w-5" /> 
                       My Subscription
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start"
+                      onClick={goToAdmin}
+                    >
+                      <Settings className="mr-2 h-5 w-5" /> 
+                      Admin Dashboard
                     </Button>
                     <Button 
                       variant="destructive" 

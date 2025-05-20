@@ -20,8 +20,33 @@ import Pricing from "./pages/Pricing";
 import Subscription from "./pages/Subscription";
 import Admin from "./pages/Admin";
 import PrivateRoute from "./components/PrivateRoute";
+import { useAuth } from "./context/AuthContext";
+import { useEffect } from "react";
+import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient();
+
+// Create an AdminRoute component to protect admin routes
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isAdmin, checkIsAdmin } = useAuth();
+  
+  useEffect(() => {
+    if (user) {
+      // Check admin status explicitly when this component mounts
+      checkIsAdmin();
+    }
+  }, [user, checkIsAdmin]);
+  
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (!isAdmin) {
+    return <Navigate to="/" />;
+  }
+
+  return <>{children}</>;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -54,7 +79,11 @@ const App = () => (
                   <Profile />
                 </PrivateRoute>
               } />
-              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin" element={
+                <AdminRoute>
+                  <Admin />
+                </AdminRoute>
+              } />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

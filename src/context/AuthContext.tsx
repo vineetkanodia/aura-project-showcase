@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,6 +8,8 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
+  isAdmin: boolean;
+  checkIsAdmin: () => Promise<boolean>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any, isUsernameError?: boolean, isEmailError?: boolean }>;
   signOut: () => Promise<void>;
@@ -52,23 +55,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check if user is admin
+  const checkIsAdmin = async (): Promise<boolean> => {
+    try {
+      if (!user) return false;
+      
+      const { data: roles, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error checking admin status:', error);
+        return false;
+      }
+      
+      const adminStatus = roles?.role === 'admin';
+      setIsAdmin(adminStatus);
+      return adminStatus;
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      return false;
+    }
+  };
 
   useEffect(() => {
     // First check for existing session silently (without toasts)
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
+      
+      if (currentSession?.user) {
+        // Check admin status after session is loaded
+        checkIsAdmin();
+      }
+      
       setIsLoading(false);
       setIsFirstLoad(false); // Mark first session check complete
     });
     
     // Then set up auth state listener with toasts only for actual events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
         // Only update state if it's actually different to avoid loops
         if (JSON.stringify(session) !== JSON.stringify(currentSession)) {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
+          
+          // Check admin status when auth state changes
+          if (currentSession?.user) {
+            await checkIsAdmin();
+          } else {
+            setIsAdmin(false);
+          }
         }
         
         // Only show toasts for actual sign in/out events, not initial page load
@@ -94,6 +136,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         password,
       });
+      
+      if (!error) {
+        // Check admin status after successful sign in
+        await checkIsAdmin();
+      }
+      
       return { error };
     } catch (error) {
       console.error('Error signing in:', error);
@@ -135,9 +183,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isUsernameError: true
         };
       }
-
-      // Instead of checking if email exists (which requires admin rights),
-      // we'll proceed with signup and handle any duplicate email errors from the API
       
       // Proceed with signup
       const { error } = await supabase.auth.signUp({
@@ -178,6 +223,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error('Error signing out:', error);
         toast.error(`Error signing out: ${error.message}`);
+      } else {
+        setIsAdmin(false);
       }
     } catch (error: any) {
       console.error('Exception signing out:', error);
@@ -244,6 +291,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     user,
     isLoading,
+    isAdmin,
+    checkIsAdmin,
     signIn,
     signUp,
     signOut,
