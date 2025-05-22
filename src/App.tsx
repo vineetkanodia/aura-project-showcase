@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "next-themes";
 
 import Index from "./pages/Index";
@@ -20,9 +20,7 @@ import Pricing from "./pages/Pricing";
 import Subscription from "./pages/Subscription";
 import Admin from "./pages/Admin";
 import PrivateRoute from "./components/PrivateRoute";
-import { useAuth } from "./context/AuthContext";
 import { useEffect } from "react";
-import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
@@ -41,8 +39,17 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" />;
   }
   
-  if (!isAdmin) {
+  if (isAdmin === false) {
     return <Navigate to="/" />;
+  }
+
+  // If still checking admin status, show a loading state
+  if (isAdmin === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
   }
 
   return <>{children}</>;

@@ -13,13 +13,17 @@ interface AIContentGeneratorProps {
   placeholder?: string;
   label?: string;
   defaultPrompt?: string;
+  maxTokens?: number;
+  temperature?: number;
 }
 
 const AIContentGenerator = ({
   onContentGenerated,
   placeholder = "Generated content will appear here...",
   label = "Generate content with AI",
-  defaultPrompt = "Write a professional description for a portfolio project"
+  defaultPrompt = "Write a professional description for a portfolio project",
+  maxTokens = 800,
+  temperature = 0.7
 }: AIContentGeneratorProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [prompt, setPrompt] = useState(defaultPrompt);
@@ -35,7 +39,11 @@ const AIContentGenerator = ({
     
     try {
       const { data, error } = await supabase.functions.invoke('generate-with-gemini', {
-        body: { prompt }
+        body: { 
+          prompt,
+          maxTokens,
+          temperature 
+        }
       });
 
       if (error) throw new Error(error.message);
