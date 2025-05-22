@@ -6,6 +6,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "next-themes";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { checkSupabaseConnection } from "./integrations/supabase/client";
 
 import Index from "./pages/Index";
 import Projects from "./pages/Projects";
@@ -20,20 +23,51 @@ import Pricing from "./pages/Pricing";
 import Subscription from "./pages/Subscription";
 import Admin from "./pages/Admin";
 import PrivateRoute from "./components/PrivateRoute";
-import { useEffect } from "react";
 
-const queryClient = new QueryClient();
+// Configure QueryClient with retry logic and error handling
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 3,
+      retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+      onError: (error) => {
+        console.error('Query error:', error);
+        toast.error("Failed to fetch data. Please check your connection and try again.");
+      }
+    }
+  }
+});
 
 // Create an AdminRoute component to protect admin routes
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isAdmin, checkIsAdmin } = useAuth();
+  const [connectionChecked, setConnectionChecked] = useState(false);
   
   useEffect(() => {
-    if (user) {
+    // Check Supabase connection when component mounts
+    const checkConnection = async () => {
+      const { connected, error } = await checkSupabaseConnection();
+      if (!connected) {
+        console.error('Supabase connection issue:', error);
+        toast.error("Connection to the database failed. Some features may be unavailable.");
+      }
+      setConnectionChecked(true);
+    };
+    
+    checkConnection();
+  }, []);
+  
+  useEffect(() => {
+    if (user && connectionChecked) {
       // Check admin status explicitly when this component mounts
-      checkIsAdmin();
+      checkIsAdmin().catch(err => {
+        console.error("Failed to check admin status:", err);
+        toast.error("Failed to verify admin privileges. Please try again later.");
+      });
     }
-  }, [user, checkIsAdmin]);
+  }, [user, checkIsAdmin, connectionChecked]);
   
   if (!user) {
     return <Navigate to="/login" />;
@@ -55,51 +89,85 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="dark">
-      <AuthProvider>
-        <TooltipProvider>
-          <div className="overflow-x-hidden max-w-[100vw]">
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/projects" element={<Projects />} />
-                <Route path="/projects/:id" element={
-                  <PrivateRoute>
-                    <ProjectDetail />
-                  </PrivateRoute>
-                } />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/subscription" element={
-                  <PrivateRoute>
-                    <Subscription />
-                  </PrivateRoute>
-                } />
-                <Route path="/profile" element={
-                  <PrivateRoute>
-                    <Profile />
-                  </PrivateRoute>
-                } />
-                <Route path="/admin" element={
-                  <AdminRoute>
-                    <Admin />
-                  </AdminRoute>
-                } />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </div>
-        </TooltipProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
+  
+  useEffect(() => {
+    // Check Supabase connection when app loads
+    const checkConnection = async () => {
+      try {
+        const { connected } = await checkSupabaseConnection();
+        setConnectionStatus(connected ? 'connected' : 'error');
+        
+        if (!connected) {
+          toast.error("Connection to the database failed. Some features may be unavailable.");
+        }
+      } catch (err) {
+        console.error('Connection check error:', err);
+        setConnectionStatus('error');
+        toast.error("Connection to the database failed. Some features may be unavailable.");
+      }
+    };
+    
+    checkConnection();
+    
+    // Setup periodic connection checks
+    const intervalId = setInterval(checkConnection, 60000); // Check every minute
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="dark">
+        <AuthProvider>
+          <TooltipProvider>
+            <div className="overflow-x-hidden max-w-[100vw]">
+              {connectionStatus === 'error' && (
+                <div className="bg-red-500 text-white p-2 text-center text-sm">
+                  Database connection issues detected. Some features may not work properly.
+                </div>
+              )}
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/projects" element={<Projects />} />
+                  <Route path="/projects/:id" element={
+                    <PrivateRoute>
+                      <ProjectDetail />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/subscription" element={
+                    <PrivateRoute>
+                      <Subscription />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/profile" element={
+                    <PrivateRoute>
+                      <Profile />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/admin" element={
+                    <AdminRoute>
+                      <Admin />
+                    </AdminRoute>
+                  } />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </div>
+          </TooltipProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
