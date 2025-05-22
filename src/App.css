@@ -43,9 +43,38 @@
   color: #888;
 }
 
-/* Add these global styles to prevent horizontal overflow */
+/* Enhanced global styles to prevent horizontal overflow */
 html, body {
   overflow-x: hidden;
   max-width: 100%;
-  width: 100vw;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+/* Ensure images don't cause overflow */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Add responsive container class */
+.container-fluid {
+  width: 100%;
+  padding-right: 15px;
+  padding-left: 15px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/* Ensure tables don't overflow on mobile */
+table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
 }
