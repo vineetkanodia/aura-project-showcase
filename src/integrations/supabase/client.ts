@@ -19,8 +19,12 @@ export const supabase = createClient<Database>(
     },
     global: {
       fetch: (...args) => {
+        // Fixed: Properly type and use the fetch arguments
+        const [url, options] = args;
+        
         // Using a custom fetch with timeout to avoid hanging requests
-        return fetch(...args, {
+        return fetch(url, {
+          ...options,
           signal: AbortSignal.timeout(15000) // 15 second timeout
         }).catch(error => {
           console.error('Supabase fetch error:', error);

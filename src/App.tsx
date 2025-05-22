@@ -32,9 +32,12 @@ const queryClient = new QueryClient({
       retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
       staleTime: 5 * 60 * 1000, // 5 minutes
       refetchOnWindowFocus: false,
-      onError: (error) => {
-        console.error('Query error:', error);
-        toast.error("Failed to fetch data. Please check your connection and try again.");
+      // Updated to use the correct structure for error handling in latest TanStack Query
+      meta: {
+        onError: (error: Error) => {
+          console.error('Query error:', error);
+          toast.error("Failed to fetch data. Please check your connection and try again.");
+        }
       }
     }
   }
