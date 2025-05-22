@@ -71,7 +71,7 @@ const AIContentGenerator = ({
   };
 
   return (
-    <Card>
+    <Card className="w-full max-w-full overflow-hidden">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-primary" />
@@ -89,7 +89,7 @@ const AIContentGenerator = ({
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="What kind of content do you need?"
             disabled={isGenerating}
-            className="bg-background"
+            className="bg-background w-full"
           />
         </div>
         
@@ -110,7 +110,7 @@ const AIContentGenerator = ({
             onChange={(e) => setGeneratedContent(e.target.value)}
             placeholder={placeholder}
             disabled={isGenerating}
-            className="min-h-[200px] bg-background"
+            className="min-h-[200px] bg-background w-full"
           />
         </div>
       </CardContent>

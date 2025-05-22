@@ -67,8 +67,8 @@ const PricingCard = ({
         <ul className="space-y-2">
           {plan.features.map((feature, index) => (
             <li key={index} className="flex items-center gap-2">
-              <Check size={18} className="text-primary" />
-              <span>{feature}</span>
+              <Check size={18} className="text-primary flex-shrink-0" />
+              <span className="text-sm">{feature}</span>
             </li>
           ))}
         </ul>
@@ -137,11 +137,11 @@ const Pricing = () => {
   }, []);
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
       
-      <main className="pt-32 pb-20">
-        <div className="container mx-auto px-4">
+      <main className="pt-32 pb-20 w-full overflow-hidden">
+        <div className="container mx-auto px-4 overflow-x-hidden">
           <motion.div 
             className="text-center max-w-3xl mx-auto mb-16"
             initial={{ opacity: 0, y: 20 }}
