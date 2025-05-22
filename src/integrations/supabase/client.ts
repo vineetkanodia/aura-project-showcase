@@ -15,7 +15,8 @@ export const supabase = createClient<Database>(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storageKey: 'supabase-auth'
+      storageKey: 'supabase-auth',
+      flowType: 'pkce' // Using PKCE flow for better OAuth security
     },
     global: {
       fetch: (...args) => {

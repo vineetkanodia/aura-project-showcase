@@ -182,16 +182,31 @@ const Login = () => {
   const handleOAuthLogin = async (provider: 'github' | 'google') => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({ provider });
+      
+      // Configure OAuth with proper redirects
+      const { data, error } = await supabase.auth.signInWithOAuth({ 
+        provider,
+        options: {
+          redirectTo: window.location.origin + '/login', // Always redirect back to login page
+          skipBrowserRedirect: false, // Make sure browser is redirected
+          queryParams: {
+            // For Google, you need these additional parameters for proper flow
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        }
+      });
       
       if (error) {
-        toast.error(error.message);
+        toast.error(`Error connecting with ${provider}: ${error.message}`);
       }
+      
+      // Don't need to do anything with data - user will be redirected to provider
     } catch (error: any) {
-      toast.error(error.message || "Authentication failed");
-    } finally {
+      toast.error(`Authentication failed: ${error.message || "Unknown error"}`);
       setIsLoading(false);
     }
+    // Don't set isLoading to false here since we're redirecting away
   };
   
   return (

@@ -47,6 +47,7 @@ const queryClient = new QueryClient({
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isAdmin, checkIsAdmin } = useAuth();
   const [connectionChecked, setConnectionChecked] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   
   useEffect(() => {
     // Check Supabase connection when component mounts
@@ -65,10 +66,17 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (user && connectionChecked) {
       // Check admin status explicitly when this component mounts
-      checkIsAdmin().catch(err => {
-        console.error("Failed to check admin status:", err);
-        toast.error("Failed to verify admin privileges. Please try again later.");
-      });
+      setIsCheckingAdmin(true);
+      checkIsAdmin()
+        .then(isAdminResult => {
+          setIsCheckingAdmin(false);
+        })
+        .catch(err => {
+          console.error("Failed to check admin status:", err);
+          setIsCheckingAdmin(false);
+        });
+    } else {
+      setIsCheckingAdmin(false);
     }
   }, [user, checkIsAdmin, connectionChecked]);
   
@@ -77,11 +85,12 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (isAdmin === false) {
+    toast.error("You don't have admin privileges to access this page.");
     return <Navigate to="/" />;
   }
 
   // If still checking admin status, show a loading state
-  if (isAdmin === undefined) {
+  if (isAdmin === null || isCheckingAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>

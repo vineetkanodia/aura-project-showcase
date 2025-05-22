@@ -8,7 +8,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
-  isAdmin: boolean;
+  isAdmin: boolean | null; // Changed from undefined to null for clearer state checks
   checkIsAdmin: () => Promise<boolean>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any, isUsernameError?: boolean, isEmailError?: boolean }>;
@@ -55,21 +55,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null); // Changed from undefined to null
   const [adminCheckAttempts, setAdminCheckAttempts] = useState(0);
+  const [lastAdminCheckTime, setLastAdminCheckTime] = useState(0);
 
-  // Check if user is admin with retry logic
+  // Check if user is admin with retry logic and rate limiting
   const checkIsAdmin = async (): Promise<boolean> => {
     try {
       if (!user) return false;
       
+      // Add rate limiting to prevent too many admin checks
+      const now = Date.now();
+      if (now - lastAdminCheckTime < 2000 && adminCheckAttempts > 0) {
+        // If checked recently, return current value
+        return !!isAdmin;
+      }
+      
+      setLastAdminCheckTime(now);
       setAdminCheckAttempts(prev => prev + 1);
       
       const { data: roles, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle(); // Changed from .single() to .maybeSingle() for better error handling
 
       if (error) {
         // If error is due to no matching row, not a connection issue
@@ -87,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         // Don't change current admin state on error to avoid disruption
-        return isAdmin;
+        return !!isAdmin;
       }
       
       const adminStatus = roles?.role === 'admin';
@@ -103,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.error('Network error while checking permissions. Please try again later.');
       }
       
-      return isAdmin; // Keep current state on error
+      return !!isAdmin; // Keep current state on error
     }
   };
 
@@ -151,7 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.error('Admin check on auth change failed:', err);
             });
           } else {
-            setIsAdmin(false);
+            setIsAdmin(null); // Reset to null if user is not logged in
           }
         }
         
@@ -191,6 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Update the signUp function to better handle OAuth providers
   const signUp = async (email: string, password: string, userData: any) => {
     try {
       // Validate username format
@@ -266,7 +276,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error signing out:', error);
         toast.error(`Error signing out: ${error.message}`);
       } else {
-        setIsAdmin(false);
+        setIsAdmin(null); // Reset to null on sign out
       }
     } catch (error: any) {
       console.error('Exception signing out:', error);
