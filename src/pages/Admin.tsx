@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -15,6 +14,7 @@ import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import AIContentGenerator from '@/components/AIContentGenerator';
 
 interface User {
   id: string;
@@ -326,6 +326,7 @@ const AdminPage = () => {
               <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="plans">Plans</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
+              <TabsTrigger value="ai">AI Tools</TabsTrigger>
             </TabsList>
             
             {/* Dashboard Tab */}
@@ -742,6 +743,72 @@ const AdminPage = () => {
                       Save Settings
                     </Button>
                   </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            {/* AI Tools Tab */}
+            <TabsContent value="ai">
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI Content Generator</CardTitle>
+                  <CardDescription>
+                    Use Gemini AI to generate content for your projects and website
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AIContentGenerator 
+                    onContentGenerated={(content) => {
+                      // Store in local storage for later use
+                      localStorage.setItem('adminGeneratedContent', content);
+                      toast.success('Content generated! You can now use it in your projects.');
+                    }}
+                    defaultPrompt="Generate a professional description for a portfolio project about a responsive web application"
+                    label="Project Content Generator"
+                  />
+                  
+                  <div className="mt-8">
+                    <h3 className="text-lg font-medium mb-4">AI Content Ideas</h3>
+                    <div className="grid gap-3">
+                      <Button 
+                        variant="outline" 
+                        className="justify-start"
+                        onClick={() => {
+                          // Set predefined prompts
+                          const textareas = document.querySelectorAll('textarea');
+                          if (textareas.length > 0) {
+                            textareas[0].value = "Write a professional about me section for a portfolio website of a web developer";
+                          }
+                        }}
+                      >
+                        Generate About Me Section
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="justify-start"
+                        onClick={() => {
+                          const textareas = document.querySelectorAll('textarea');
+                          if (textareas.length > 0) {
+                            textareas[0].value = "Generate 5 compelling features for a premium subscription plan for a portfolio website";
+                          }
+                        }}
+                      >
+                        Generate Subscription Features
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="justify-start"
+                        onClick={() => {
+                          const textareas = document.querySelectorAll('textarea');
+                          if (textareas.length > 0) {
+                            textareas[0].value = "Write a professional email response to a client inquiry about website development services";
+                          }
+                        }}
+                      >
+                        Generate Client Response Email
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

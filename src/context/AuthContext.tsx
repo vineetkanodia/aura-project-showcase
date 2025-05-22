@@ -74,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       const adminStatus = roles?.role === 'admin';
+      console.log('Admin status check:', user.email, adminStatus);
       setIsAdmin(adminStatus);
       return adminStatus;
     } catch (error) {

@@ -20,9 +20,16 @@ import { toast } from 'sonner';
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin, checkIsAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Force check admin status on component mount
+  useEffect(() => {
+    if (user) {
+      checkIsAdmin();
+    }
+  }, [user, checkIsAdmin]);
 
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
@@ -75,29 +82,19 @@ const Navbar = () => {
     setIsMobileMenuOpen(false);
   };
 
-  // Check if user is admin
-  const checkIsAdmin = async () => {
-    try {
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user?.id)
-        .single();
-      
-      return roles?.role === 'admin';
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      return false;
-    }
-  };
-
   const goToAdmin = async () => {
-    const isAdmin = await checkIsAdmin();
     if (isAdmin) {
       navigate('/admin');
       setIsMobileMenuOpen(false);
     } else {
-      toast.error('You do not have admin access');
+      // Try to check admin status again before showing error
+      const isCurrentlyAdmin = await checkIsAdmin();
+      if (isCurrentlyAdmin) {
+        navigate('/admin');
+        setIsMobileMenuOpen(false);
+      } else {
+        toast.error('You do not have admin access');
+      }
     }
   };
 
@@ -257,14 +254,13 @@ const Navbar = () => {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div 
-            className="md:hidden fixed inset-0 z-50 bg-gradient-to-b from-background to-background/95 backdrop-blur-md overflow-hidden"
+            className="md:hidden fixed inset-0 z-50 bg-background/95 backdrop-blur-md"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            style={{ top: 0, height: '100%', width: '100%', overflowY: 'auto', overflowX: 'hidden' }}
           >
-            <div className="flex flex-col h-full max-w-full">
+            <div className="flex flex-col h-full w-full overflow-hidden max-h-screen">
               {/* Header with logo and close button */}
               <div className="flex items-center justify-between p-4 border-b border-white/10">
                 <Link to="/" className="flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
@@ -298,12 +294,17 @@ const Navbar = () => {
                     <div className="text-sm text-muted-foreground truncate max-w-[200px]">
                       {user.email}
                     </div>
+                    {isAdmin && (
+                      <span className="inline-flex items-center rounded-full bg-primary/20 px-2 py-1 text-xs font-medium text-primary mt-1">
+                        Admin
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
               
-              {/* Navigation links */}
-              <div className="flex-1 overflow-y-auto py-4">
+              {/* Navigation links - Fix overflowing */}
+              <div className="flex-1 overflow-y-auto py-4 px-4">
                 <nav className="space-y-1">
                   {[
                     { name: 'Home', path: '/' },
@@ -328,72 +329,74 @@ const Navbar = () => {
                 </nav>
               </div>
               
-              {/* Bottom action buttons */}
-              <div className="p-4 border-t border-white/10 space-y-3">
-                {user ? (
-                  <>
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start"
-                      onClick={goToProfile}
-                    >
-                      <User className="mr-2 h-5 w-5" /> 
-                      My Profile
+              {/* Bottom action buttons - Fix overflowing */}
+              <div className="p-4 border-t border-white/10">
+                <div className="space-y-3 pb-safe">
+                  {user ? (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start"
+                        onClick={goToProfile}
+                      >
+                        <User className="mr-2 h-5 w-5" /> 
+                        My Profile
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start"
+                        onClick={() => {
+                          navigate('/subscription');
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        <Settings className="mr-2 h-5 w-5" /> 
+                        My Subscription
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start"
+                        onClick={goToAdmin}
+                      >
+                        <Settings className="mr-2 h-5 w-5" /> 
+                        Admin Dashboard
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        className="w-full justify-start"
+                        onClick={() => {
+                          handleSignOut();
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        <LogOut className="mr-2 h-5 w-5" /> 
+                        Sign Out
+                      </Button>
+                    </>
+                  ) : (
+                    <Button className="w-full">
+                      <Link 
+                        to="/login" 
+                        className="w-full flex justify-center"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Login / Sign Up
+                      </Link>
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start"
-                      onClick={() => {
-                        navigate('/subscription');
-                        setIsMobileMenuOpen(false);
-                      }}
-                    >
-                      <Settings className="mr-2 h-5 w-5" /> 
-                      My Subscription
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start"
-                      onClick={goToAdmin}
-                    >
-                      <Settings className="mr-2 h-5 w-5" /> 
-                      Admin Dashboard
-                    </Button>
-                    <Button 
-                      variant="destructive" 
-                      className="w-full justify-start"
-                      onClick={() => {
-                        handleSignOut();
-                        setIsMobileMenuOpen(false);
-                      }}
-                    >
-                      <LogOut className="mr-2 h-5 w-5" /> 
-                      Sign Out
-                    </Button>
-                  </>
-                ) : (
-                  <Button className="w-full">
-                    <Link 
-                      to="/login" 
-                      className="w-full flex justify-center"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Login / Sign Up
-                    </Link>
-                  </Button>
-                )}
-                
-                {/* Social links */}
-                <div className="flex justify-center gap-6 pt-3">
-                  <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-                    <Github size={22} className="text-muted-foreground hover:text-primary transition-colors" />
-                  </a>
-                  <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
-                    <Linkedin size={22} className="text-muted-foreground hover:text-primary transition-colors" />
-                  </a>
-                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
-                    <Twitter size={22} className="text-muted-foreground hover:text-primary transition-colors" />
-                  </a>
+                  )}
+                  
+                  {/* Social links */}
+                  <div className="flex justify-center gap-6 pt-3">
+                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                      <Github size={22} className="text-muted-foreground hover:text-primary transition-colors" />
+                    </a>
+                    <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                      <Linkedin size={22} className="text-muted-foreground hover:text-primary transition-colors" />
+                    </a>
+                    <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
+                      <Twitter size={22} className="text-muted-foreground hover:text-primary transition-colors" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
