@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "next-themes";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { checkSupabaseConnection } from "./integrations/supabase/client";
 
@@ -32,11 +32,13 @@ const queryClient = new QueryClient({
       retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
       staleTime: 5 * 60 * 1000, // 5 minutes
       refetchOnWindowFocus: false,
-      // Updated to use the correct structure for error handling in latest TanStack Query
+      // Updated structure for error handling in latest TanStack Query
       meta: {
-        onError: (error: Error) => {
-          console.error('Query error:', error);
-          toast.error("Failed to fetch data. Please check your connection and try again.");
+        onSettled: (data: unknown, error: Error | null) => {
+          if (error) {
+            console.error('Query error:', error);
+            toast.error("Failed to fetch data. Please check your connection and try again.");
+          }
         }
       }
     }
@@ -103,31 +105,78 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => {
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
+  const [retryCount, setRetryCount] = useState(0);
   
-  useEffect(() => {
-    // Check Supabase connection when app loads
-    const checkConnection = async () => {
-      try {
-        const { connected } = await checkSupabaseConnection();
-        setConnectionStatus(connected ? 'connected' : 'error');
-        
-        if (!connected) {
-          toast.error("Connection to the database failed. Some features may be unavailable.");
-        }
-      } catch (err) {
-        console.error('Connection check error:', err);
+  // Create a memoized version of the connection check function
+  const checkConnection = useCallback(async () => {
+    try {
+      const { connected, error, isTimeout } = await checkSupabaseConnection();
+      
+      if (connected) {
+        setConnectionStatus('connected');
+        setRetryCount(0); // Reset retry count on successful connection
+      } else {
         setConnectionStatus('error');
+        console.error('Connection check error:', error);
+        
+        // Show error toast, but not on every retry to avoid spamming
+        if (retryCount < 3) {
+          toast.error(
+            isTimeout 
+              ? "Connection to the database timed out. Retrying..." 
+              : "Connection to the database failed. Some features may be unavailable."
+          );
+        }
+        
+        // Increment retry counter
+        setRetryCount(prev => prev + 1);
+      }
+    } catch (err) {
+      console.error('Connection check exception:', err);
+      setConnectionStatus('error');
+      
+      if (retryCount < 3) {
         toast.error("Connection to the database failed. Some features may be unavailable.");
       }
-    };
-    
+      setRetryCount(prev => prev + 1);
+    }
+  }, [retryCount]);
+  
+  useEffect(() => {
+    // Initial connection check
     checkConnection();
     
-    // Setup periodic connection checks
-    const intervalId = setInterval(checkConnection, 60000); // Check every minute
+    // Setup periodic connection checks - more frequent when in error state
+    const checkInterval = connectionStatus === 'error' ? 15000 : 60000;
+    const intervalId = setInterval(checkConnection, checkInterval);
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [checkConnection, connectionStatus]);
+
+  // Auto-retry connection feature
+  useEffect(() => {
+    let retryTimer: NodeJS.Timeout | null = null;
+    
+    if (connectionStatus === 'error') {
+      // Exponential backoff for retries (up to 30 seconds)
+      const retryDelay = Math.min(2000 * (2 ** Math.min(retryCount, 4)), 30000);
+      
+      retryTimer = setTimeout(() => {
+        console.log(`Automatic retry attempt ${retryCount + 1}...`);
+        checkConnection();
+      }, retryDelay);
+    }
+    
+    return () => {
+      if (retryTimer) clearTimeout(retryTimer);
+    };
+  }, [connectionStatus, retryCount, checkConnection]);
+
+  // Allow manual retry
+  const handleRetryConnection = () => {
+    toast.info("Attempting to reconnect to database...");
+    checkConnection();
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -136,8 +185,14 @@ const App = () => {
           <TooltipProvider>
             <div className="overflow-x-hidden max-w-[100vw]">
               {connectionStatus === 'error' && (
-                <div className="bg-red-500 text-white p-2 text-center text-sm">
-                  Database connection issues detected. Some features may not work properly.
+                <div className="bg-red-500 text-white p-2 text-center text-sm flex justify-center items-center gap-2">
+                  <span>Database connection issues detected. Some features may not work properly.</span>
+                  <button 
+                    onClick={handleRetryConnection}
+                    className="bg-white/20 hover:bg-white/30 px-2 py-1 rounded text-xs transition-colors"
+                  >
+                    Retry Connection
+                  </button>
                 </div>
               )}
               <Toaster />

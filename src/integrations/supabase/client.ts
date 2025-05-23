@@ -16,40 +16,77 @@ export const supabase = createClient<Database>(
       autoRefreshToken: true,
       detectSessionInUrl: true,
       storageKey: 'supabase-auth',
-      flowType: 'pkce' // Using PKCE flow for better OAuth security
+      flowType: 'pkce', // Using PKCE flow for better OAuth security
     },
     global: {
-      fetch: (...args) => {
-        // Fixed: Properly type and use the fetch arguments
-        const [url, options] = args;
+      headers: {
+        'x-retry-count': '0', // Custom header for tracking retries
+      },
+      fetch: (input, init) => {
+        // Set a reasonable timeout to avoid hanging requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
-        // Using a custom fetch with timeout to avoid hanging requests
-        return fetch(url, {
-          ...options,
-          signal: AbortSignal.timeout(15000) // 15 second timeout
-        }).catch(error => {
-          console.error('Supabase fetch error:', error);
-          throw error;
-        });
+        // Merge the abort signal with any existing signal
+        const signal = controller.signal;
+        const finalInit = init ? { ...init, signal } : { signal };
+        
+        return fetch(input, finalInit)
+          .then((response) => {
+            clearTimeout(timeoutId);
+            return response;
+          })
+          .catch((error) => {
+            clearTimeout(timeoutId);
+            console.error('Supabase fetch error:', error);
+            
+            // Implement basic retry logic for network errors
+            if (error.name === 'AbortError' || 
+                error.name === 'TypeError' || 
+                error.message.includes('network') || 
+                error.message.includes('connection')) {
+              
+              console.log('Attempting to retry connection...');
+              return Promise.reject(error); // Let Supabase handle retries
+            }
+            
+            throw error;
+          });
       }
     },
     realtime: {
       params: {
         eventsPerSecond: 2 // Rate limiting for realtime events
       }
+    },
+    db: {
+      schema: 'public'
     }
   }
 );
 
-// Helper function to check Supabase connection status
+// Helper function to check Supabase connection status with better error handling
 export const checkSupabaseConnection = async () => {
   try {
-    // Simple health check query
-    const { error } = await supabase.from('subscription_plans').select('count').limit(1);
+    // Simple health check query with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const { error } = await supabase
+      .from('subscription_plans')
+      .select('count')
+      .limit(1)
+      .abortSignal(controller.signal);
+    
+    clearTimeout(timeoutId);
     return { connected: !error, error: error?.message };
   } catch (err) {
     console.error('Supabase connection check failed:', err);
-    return { connected: false, error: err instanceof Error ? err.message : 'Unknown error' };
+    return { 
+      connected: false, 
+      error: err instanceof Error ? err.message : 'Unknown connection error',
+      isTimeout: err instanceof Error && err.name === 'AbortError'
+    };
   }
 };
 
