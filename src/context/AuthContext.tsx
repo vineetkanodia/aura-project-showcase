@@ -2,14 +2,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
-  isAdmin: boolean | null;
-  checkIsAdmin: () => Promise<boolean>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any, isUsernameError?: boolean, isEmailError?: boolean }>;
   signOut: () => Promise<void>;
@@ -27,6 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Username validation function
 const isValidUsername = (username: string): boolean => {
+  // Only allow letters, numbers, and underscores (no spaces or special chars)
   const usernameRegex = /^[a-zA-Z0-9_]+$/;
   return usernameRegex.test(username);
 };
@@ -43,7 +42,7 @@ const validatePassword = (password: string): { isValid: boolean, message: string
     if (!hasLowercase) message += " a lowercase letter,";
     if (!hasUppercase) message += " an uppercase letter,";
     if (!hasNumber) message += " a number,";
-    return { isValid, message: message.slice(0, -1) };
+    return { isValid, message: message.slice(0, -1) }; // Remove trailing comma
   }
   
   return { isValid: true, message: "" };
@@ -54,94 +53,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-
-  // Check if user is admin using the database function
-  const checkIsAdmin = async (): Promise<boolean> => {
-    try {
-      if (!user) {
-        setIsAdmin(false);
-        return false;
-      }
-      
-      // Use the database function to check admin status
-      const { data, error } = await supabase.rpc('is_admin');
-
-      if (error) {
-        console.error('Error checking admin status:', error);
-        // Don't show toast for admin check errors to avoid spam
-        setIsAdmin(false);
-        return false;
-      }
-      
-      const adminStatus = !!data;
-      console.log('Admin status check for', user.email, ':', adminStatus);
-      setIsAdmin(adminStatus);
-      return adminStatus;
-    } catch (error) {
-      console.error('Exception checking admin status:', error);
-      setIsAdmin(false);
-      return false;
-    }
-  };
 
   useEffect(() => {
-    // Initialize auth silently
-    const initializeAuth = async () => {
-      try {
-        setIsLoading(true);
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
-        if (currentSession?.user) {
-          setSession(currentSession);
-          setUser(currentSession.user);
-          
-          // Check admin status after session is loaded
-          setTimeout(() => {
-            checkIsAdmin().catch(err => {
-              console.error('Initial admin check failed:', err);
-            });
-          }, 100);
-        }
-      } catch (error) {
-        console.error('Error retrieving session:', error);
-      } finally {
-        setIsLoading(false);
-        setIsFirstLoad(false);
-      }
-    };
+    // Track if this is an initial load to avoid showing toast on page refresh
+    let isInitialLoad = true;
     
-    initializeAuth();
-    
-    // Set up auth state listener
+    // First set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        console.log('Auth state change:', event);
-        
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
-        // Check admin status when user signs in
-        if (currentSession?.user && event === 'SIGNED_IN') {
-          setTimeout(() => {
-            checkIsAdmin().catch(err => {
-              console.error('Admin check on sign in failed:', err);
-            });
-          }, 100);
-        } else if (!currentSession?.user) {
-          setIsAdmin(null);
-        }
-        
-        // Show toasts for actual sign in/out events
-        if (!isFirstLoad && event !== 'TOKEN_REFRESHED') {
+        // Only show toasts for actual sign in/out events, not on initial page load
+        if (!isInitialLoad) {
           if (event === 'SIGNED_IN') {
             toast.success('Signed in successfully!');
           } else if (event === 'SIGNED_OUT') {
             toast.success('Signed out successfully!');
           }
         }
+        
+        isInitialLoad = false;
       }
     );
+
+    // Then check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setIsLoading(false);
+      isInitialLoad = false; // Mark initial load complete
+      setIsFirstLoad(false); // Mark first session check complete
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -154,7 +97,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         password,
       });
-      
       return { error };
     } catch (error) {
       console.error('Error signing in:', error);
@@ -196,7 +138,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isUsernameError: true
         };
       }
-      
+
+      // Check if email exists
+      const { data: userExists, error: emailCheckError } = await supabase.auth.admin.getUserByEmail(email);
+      if (emailCheckError) {
+        // Since we can't directly check if an email exists (this API call might fail),
+        // We'll proceed with signup and handle any duplicate email errors from the API
+      } else if (userExists) {
+        return { 
+          error: new Error('An account with this email already exists.'),
+          isEmailError: true
+        };
+      }
+
       // Proceed with signup
       const { error } = await supabase.auth.signUp({
         email,
@@ -214,6 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!error) {
         toast.success('Account created! Please check your email for verification.');
       } else if (error.message.includes('email')) {
+        // Handle duplicate email error from the API
         return { 
           error: new Error('An account with this email already exists.'),
           isEmailError: true
@@ -229,52 +184,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      setIsLoading(true);
       const { error } = await supabase.auth.signOut();
-      
       if (error) {
         console.error('Error signing out:', error);
-        toast.error(`Error signing out: ${error.message}`);
-      } else {
-        setIsAdmin(null);
+        toast.error('Error signing out: ' + error.message);
       }
     } catch (error: any) {
       console.error('Exception signing out:', error);
-      toast.error('Error signing out. Please try again.');
-    } finally {
-      setIsLoading(false);
+      toast.error('Error signing out.');
     }
   };
 
   const updateProfile = async (data: Partial<ProfileData>) => {
     try {
       if (!user) return { error: new Error('User not authenticated') };
-      
-      // Validate username if it's being updated
-      if (data.username) {
-        if (!isValidUsername(data.username)) {
-          toast.error('Username can only contain letters, numbers, and underscores (no spaces or special characters).');
-          return { error: new Error('Invalid username format') };
-        }
-        
-        // Check if username already exists
-        const { data: existingUsers, error: fetchError } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('username', data.username)
-          .neq('id', user.id)
-          .limit(1);
-
-        if (fetchError) {
-          console.error('Error checking username:', fetchError);
-          return { error: fetchError };
-        }
-
-        if (existingUsers && existingUsers.length > 0) {
-          toast.error('This username is already taken. Please choose another one.');
-          return { error: new Error('Username already taken') };
-        }
-      }
       
       // Update user metadata in auth.users
       const { error } = await supabase.auth.updateUser({
@@ -283,18 +206,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       
-      if (error) {
-        console.error('Error updating profile:', error);
-        toast.error('Failed to update profile. Please try again.');
-        return { error };
+      if (!error) {
+        toast.success('Profile updated successfully!');
       }
       
-      toast.success('Profile updated successfully!');
-      return { error: null };
-      
+      return { error };
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile. Please try again.');
       return { error };
     }
   };
@@ -303,8 +221,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     user,
     isLoading,
-    isAdmin,
-    checkIsAdmin,
     signIn,
     signUp,
     signOut,

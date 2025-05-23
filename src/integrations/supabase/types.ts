@@ -9,63 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      admin_config: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          key: string
-          updated_at: string | null
-          value: string
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          key: string
-          updated_at?: string | null
-          value: string
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          key?: string
-          updated_at?: string | null
-          value?: string
-        }
-        Relationships: []
-      }
-      contact_messages: {
-        Row: {
-          created_at: string | null
-          email: string
-          id: string
-          message: string
-          name: string
-          read: boolean | null
-          subject: string
-        }
-        Insert: {
-          created_at?: string | null
-          email: string
-          id?: string
-          message: string
-          name: string
-          read?: boolean | null
-          subject: string
-        }
-        Update: {
-          created_at?: string | null
-          email?: string
-          id?: string
-          message?: string
-          name?: string
-          read?: boolean | null
-          subject?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -159,113 +102,12 @@ export type Database = {
         }
         Relationships: []
       }
-      subscription_plans: {
-        Row: {
-          created_at: string
-          description: string
-          features: string[]
-          id: string
-          interval: string
-          is_popular: boolean
-          name: string
-          price: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description: string
-          features?: string[]
-          id?: string
-          interval: string
-          is_popular?: boolean
-          name: string
-          price: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string
-          features?: string[]
-          id?: string
-          interval?: string
-          is_popular?: boolean
-          name?: string
-          price?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      user_roles: {
-        Row: {
-          created_at: string
-          id: string
-          role: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          role: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          role?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_subscriptions: {
-        Row: {
-          created_at: string
-          current_period_end: string
-          current_period_start: string
-          id: string
-          plan_id: string
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          current_period_end: string
-          current_period_start?: string
-          id?: string
-          plan_id: string
-          status: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          current_period_end?: string
-          current_period_start?: string
-          id?: string
-          plan_id?: string
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_subscriptions_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

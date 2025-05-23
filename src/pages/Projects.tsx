@@ -6,7 +6,6 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProjectCard from '@/components/ProjectCard';
 import ProjectFilter from '@/components/ProjectFilter';
-import ProjectCardSkeleton from '@/components/ProjectCardSkeleton';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Project {
@@ -143,10 +142,8 @@ const Projects = () => {
         <section className="py-12">
           <div className="container mx-auto px-4">
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(6)].map((_, index) => (
-                  <ProjectCardSkeleton key={index} />
-                ))}
+              <div className="flex justify-center items-center py-24">
+                <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
               </div>
             ) : error ? (
               <div className="text-center py-24">

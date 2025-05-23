@@ -76,7 +76,6 @@ const Login = () => {
     
     // Validate username as user types (no spaces or special characters)
     if (id === 'username') {
-      // This regex only allows letters, numbers, and underscores (no spaces)
       const usernameRegex = /^[a-zA-Z0-9_]*$/;
       if (value && !usernameRegex.test(value)) {
         setErrors(prev => ({
@@ -182,31 +181,16 @@ const Login = () => {
   const handleOAuthLogin = async (provider: 'github' | 'google') => {
     try {
       setIsLoading(true);
-      
-      // Configure OAuth with proper redirects
-      const { data, error } = await supabase.auth.signInWithOAuth({ 
-        provider,
-        options: {
-          redirectTo: window.location.origin + '/login', // Always redirect back to login page
-          skipBrowserRedirect: false, // Make sure browser is redirected
-          queryParams: {
-            // For Google, you need these additional parameters for proper flow
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        }
-      });
+      const { error } = await supabase.auth.signInWithOAuth({ provider });
       
       if (error) {
-        toast.error(`Error connecting with ${provider}: ${error.message}`);
+        toast.error(error.message);
       }
-      
-      // Don't need to do anything with data - user will be redirected to provider
     } catch (error: any) {
-      toast.error(`Authentication failed: ${error.message || "Unknown error"}`);
+      toast.error(error.message || "Authentication failed");
+    } finally {
       setIsLoading(false);
     }
-    // Don't set isLoading to false here since we're redirecting away
   };
   
   return (
