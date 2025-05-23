@@ -8,7 +8,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
-  isAdmin: boolean | null; // Changed from undefined to null for clearer state checks
+  isAdmin: boolean | null;
   checkIsAdmin: () => Promise<boolean>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any, isUsernameError?: boolean, isEmailError?: boolean }>;
@@ -27,7 +27,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Username validation function
 const isValidUsername = (username: string): boolean => {
-  // Only allow letters, numbers, and underscores (no spaces or special chars)
   const usernameRegex = /^[a-zA-Z0-9_]+$/;
   return usernameRegex.test(username);
 };
@@ -44,7 +43,7 @@ const validatePassword = (password: string): { isValid: boolean, message: string
     if (!hasLowercase) message += " a lowercase letter,";
     if (!hasUppercase) message += " an uppercase letter,";
     if (!hasNumber) message += " a number,";
-    return { isValid, message: message.slice(0, -1) }; // Remove trailing comma
+    return { isValid, message: message.slice(0, -1) };
   }
   
   return { isValid: true, message: "" };
@@ -55,69 +54,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null); // Changed from undefined to null
-  const [adminCheckAttempts, setAdminCheckAttempts] = useState(0);
-  const [lastAdminCheckTime, setLastAdminCheckTime] = useState(0);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
-  // Check if user is admin with retry logic and rate limiting
+  // Check if user is admin using the database function
   const checkIsAdmin = async (): Promise<boolean> => {
     try {
-      if (!user) return false;
-      
-      // Add rate limiting to prevent too many admin checks
-      const now = Date.now();
-      if (now - lastAdminCheckTime < 2000 && adminCheckAttempts > 0) {
-        // If checked recently, return current value
-        return !!isAdmin;
+      if (!user) {
+        setIsAdmin(false);
+        return false;
       }
       
-      setLastAdminCheckTime(now);
-      setAdminCheckAttempts(prev => prev + 1);
-      
-      const { data: roles, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle(); // Changed from .single() to .maybeSingle() for better error handling
+      // Use the database function to check admin status
+      const { data, error } = await supabase.rpc('is_admin');
 
       if (error) {
-        // If error is due to no matching row, not a connection issue
-        if (error.code === 'PGRST116') {
-          console.log('User is not an admin:', user.email);
-          setIsAdmin(false);
-          return false;
-        }
-        
         console.error('Error checking admin status:', error);
-        
-        // If we've already tried multiple times, don't spam the user with errors
-        if (adminCheckAttempts <= 2) {
-          toast.error('Failed to verify admin status. Please try refreshing the page.');
-        }
-        
-        // Don't change current admin state on error to avoid disruption
-        return !!isAdmin;
+        // Don't show toast for admin check errors to avoid spam
+        setIsAdmin(false);
+        return false;
       }
       
-      const adminStatus = roles?.role === 'admin';
-      console.log('Admin status check:', user.email, adminStatus);
+      const adminStatus = !!data;
+      console.log('Admin status check for', user.email, ':', adminStatus);
       setIsAdmin(adminStatus);
-      setAdminCheckAttempts(0); // Reset counter on successful check
       return adminStatus;
     } catch (error) {
-      console.error('Error checking admin status:', error);
-      
-      // Only show toast on first few attempts
-      if (adminCheckAttempts <= 2) {
-        toast.error('Network error while checking permissions. Please try again later.');
-      }
-      
-      return !!isAdmin; // Keep current state on error
+      console.error('Exception checking admin status:', error);
+      setIsAdmin(false);
+      return false;
     }
   };
 
   useEffect(() => {
-    // First check for existing session silently (without toasts)
+    // Initialize auth silently
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
@@ -128,13 +97,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(currentSession.user);
           
           // Check admin status after session is loaded
-          await checkIsAdmin().catch(err => {
-            console.error('Initial admin check failed:', err);
-          });
+          setTimeout(() => {
+            checkIsAdmin().catch(err => {
+              console.error('Initial admin check failed:', err);
+            });
+          }, 100);
         }
       } catch (error) {
         console.error('Error retrieving session:', error);
-        toast.error('Failed to retrieve your session. Please try refreshing the page.');
       } finally {
         setIsLoading(false);
         setIsFirstLoad(false);
@@ -143,30 +113,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     initializeAuth();
     
-    // Then set up auth state listener with toasts only for actual events
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
+      (event, currentSession) => {
         console.log('Auth state change:', event);
         
-        // Only update state if it's actually different to avoid loops
-        const sessionChanged = JSON.stringify(session) !== JSON.stringify(currentSession);
-        if (sessionChanged) {
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          
-          // Check admin status when auth state changes
-          if (currentSession?.user) {
-            await checkIsAdmin().catch(err => {
-              console.error('Admin check on auth change failed:', err);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        // Check admin status when user signs in
+        if (currentSession?.user && event === 'SIGNED_IN') {
+          setTimeout(() => {
+            checkIsAdmin().catch(err => {
+              console.error('Admin check on sign in failed:', err);
             });
-          } else {
-            setIsAdmin(null); // Reset to null if user is not logged in
-          }
+          }, 100);
+        } else if (!currentSession?.user) {
+          setIsAdmin(null);
         }
         
-        // Only show toasts for actual sign in/out events, not initial page load
-        // and not for session refreshes
-        if (!isFirstLoad && event !== 'TOKEN_REFRESHED' && sessionChanged) {
+        // Show toasts for actual sign in/out events
+        if (!isFirstLoad && event !== 'TOKEN_REFRESHED') {
           if (event === 'SIGNED_IN') {
             toast.success('Signed in successfully!');
           } else if (event === 'SIGNED_OUT') {
@@ -179,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, []); // Keep dependencies empty to run only once
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -188,11 +155,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
       });
       
-      if (!error) {
-        // Check admin status after successful sign in
-        await checkIsAdmin();
-      }
-      
       return { error };
     } catch (error) {
       console.error('Error signing in:', error);
@@ -200,7 +162,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Update the signUp function to better handle OAuth providers
   const signUp = async (email: string, password: string, userData: any) => {
     try {
       // Validate username format
@@ -253,7 +214,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!error) {
         toast.success('Account created! Please check your email for verification.');
       } else if (error.message.includes('email')) {
-        // Handle duplicate email error from the API
         return { 
           error: new Error('An account with this email already exists.'),
           isEmailError: true
@@ -276,7 +236,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error signing out:', error);
         toast.error(`Error signing out: ${error.message}`);
       } else {
-        setIsAdmin(null); // Reset to null on sign out
+        setIsAdmin(null);
       }
     } catch (error: any) {
       console.error('Exception signing out:', error);
@@ -297,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { error: new Error('Invalid username format') };
         }
         
-        // Check if username already exists (but isn't the current user's username)
+        // Check if username already exists
         const { data: existingUsers, error: fetchError } = await supabase
           .from('profiles')
           .select('username')

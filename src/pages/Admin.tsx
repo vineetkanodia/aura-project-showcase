@@ -64,19 +64,14 @@ const AdminPage = () => {
   // State for adding/editing plan
   const [editPlan, setEditPlan] = useState<Plan | null>(null);
   
-  // Check if user is admin
+  // Check if user is admin using the database function
   const { data: isAdmin, isLoading: isCheckingAdmin } = useQuery({
     queryKey: ['isAdmin', user?.id],
     queryFn: async () => {
       if (!user) return false;
       
-      // Direct check from the database for admin status
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
+      // Use the database function for admin checking
+      const { data, error } = await supabase.rpc('is_admin');
       
       if (error) {
         console.error('Error checking admin status:', error);
@@ -85,7 +80,9 @@ const AdminPage = () => {
       
       return !!data;
     },
-    enabled: !!user
+    enabled: !!user,
+    retry: 1, // Only retry once to avoid spam
+    refetchOnWindowFocus: false, // Don't refetch when window gains focus
   });
 
   // Fetch users data
