@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,188 +9,65 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Github, Mail } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
-import { toast } from "@/components/ui/sonner";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
-  const { signIn, signUp, user } = useAuth();
-  const { toast: uiToast } = useToast();
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from?.pathname || '/';
-  
   const [isLoading, setIsLoading] = useState(false);
-  const [loginData, setLoginData] = useState({
-    email: '',
-    password: '',
-    rememberMe: false
-  });
   
-  const [signupData, setSignupData] = useState({
-    firstName: '',
-    lastName: '',
-    username: '',
-    email: '',
-    password: '',
-    agreeToTerms: false
-  });
-  
-  const [errors, setErrors] = useState({
-    username: '',
-    email: '',
-    password: '',
-    terms: ''
-  });
-  
-  // Redirect if already logged in - without showing toast
-  useEffect(() => {
-    if (user) {
-      navigate(from, { replace: true });
-    }
-  }, [user, navigate, from]);
-  
-  // If user is already logged in, return null to prevent rendering the component
-  if (user) return null;
-
-  const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value, type, checked } = e.target;
-    setLoginData(prev => ({
-      ...prev,
-      [id]: type === 'checkbox' ? checked : value
-    }));
-  };
-  
-  const handleSignupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value, type, checked } = e.target;
-    
-    // Clear errors when user types
-    if (id === 'username' || id === 'email' || id === 'password') {
-      setErrors(prev => ({
-        ...prev,
-        [id]: ''
-      }));
-    }
-    
-    // Validate username as user types (no spaces or special characters)
-    if (id === 'username') {
-      const usernameRegex = /^[a-zA-Z0-9_]*$/;
-      if (value && !usernameRegex.test(value)) {
-        setErrors(prev => ({
-          ...prev,
-          username: 'Username can only contain letters, numbers, and underscores'
-        }));
-        return; // Don't update state with invalid username
-      }
-    }
-    
-    setSignupData(prev => ({
-      ...prev,
-      [id]: type === 'checkbox' ? checked : value
-    }));
-  };
-  
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!loginData.email || !loginData.password) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-    
     setIsLoading(true);
     
-    const { error } = await signIn(loginData.email, loginData.password);
-    
-    setIsLoading(false);
-    
-    if (error) {
-      toast.error(error.message);
-    } else {
-      navigate(from);
-    }
-  };
-  
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Reset errors
-    setErrors({
-      username: '',
-      email: '',
-      password: '',
-      terms: ''
-    });
-    
-    // Validate all fields
-    let hasErrors = false;
-    
-    if (!signupData.email || !signupData.password || !signupData.firstName || !signupData.username) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-    
-    if (!signupData.agreeToTerms) {
-      setErrors(prev => ({
-        ...prev,
-        terms: "You must agree to the Terms of Service and Privacy Policy"
-      }));
-      hasErrors = true;
-    }
-    
-    if (hasErrors) {
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    const userData = {
-      username: signupData.username,
-      first_name: signupData.firstName,
-      last_name: signupData.lastName || '',
-    };
-    
-    const { error, isUsernameError, isEmailError } = await signUp(signupData.email, signupData.password, userData);
-    
-    setIsLoading(false);
-    
-    if (error) {
-      if (isUsernameError) {
-        setErrors(prev => ({
-          ...prev,
-          username: error.message
-        }));
-      } else if (isEmailError) {
-        setErrors(prev => ({
-          ...prev,
-          email: error.message
-        }));
-      } else {
-        toast.error(error.message);
-      }
-    } else {
-      uiToast({
-        title: "Account created",
-        description: "Please check your email for verification instructions.",
-      });
-    }
-  };
-  
-  const handleOAuthLogin = async (provider: 'github' | 'google') => {
-    try {
-      setIsLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({ provider });
+    // Simulate login process
+    setTimeout(() => {
+      localStorage.setItem('authenticated', 'true');
       
-      if (error) {
-        toast.error(error.message);
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Authentication failed");
-    } finally {
+      toast({
+        title: "Login successful",
+        description: "Welcome back!",
+      });
+      
       setIsLoading(false);
-    }
+      navigate('/');
+    }, 1500);
+  };
+  
+  const handleSignup = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    // Simulate signup process
+    setTimeout(() => {
+      localStorage.setItem('authenticated', 'true');
+      
+      toast({
+        title: "Account created",
+        description: "Welcome to our platform!",
+      });
+      
+      setIsLoading(false);
+      navigate('/');
+    }, 1500);
+  };
+  
+  const handleOAuthLogin = (provider: string) => {
+    setIsLoading(true);
+    
+    // Simulate OAuth login
+    setTimeout(() => {
+      localStorage.setItem('authenticated', 'true');
+      
+      toast({
+        title: `${provider} login successful`,
+        description: "Welcome back!",
+      });
+      
+      setIsLoading(false);
+      navigate('/');
+    }, 1500);
   };
   
   return (
@@ -217,7 +94,7 @@ const Login = () => {
               <Button 
                 variant="outline" 
                 className="w-full border-white/10" 
-                onClick={() => handleOAuthLogin('github')}
+                onClick={() => handleOAuthLogin('GitHub')}
                 disabled={isLoading}
               >
                 <Github className="mr-2 h-4 w-4" /> Continue with GitHub
@@ -225,7 +102,7 @@ const Login = () => {
               <Button 
                 variant="outline" 
                 className="w-full border-white/10" 
-                onClick={() => handleOAuthLogin('google')}
+                onClick={() => handleOAuthLogin('Google')}
                 disabled={isLoading}
               >
                 <Mail className="mr-2 h-4 w-4" /> Continue with Google
@@ -251,14 +128,7 @@ const Login = () => {
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="name@example.com" 
-                      value={loginData.email}
-                      onChange={handleLoginChange}
-                      required 
-                    />
+                    <Input id="email" type="email" placeholder="name@example.com" required />
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -267,23 +137,12 @@ const Login = () => {
                         Forgot password?
                       </Link>
                     </div>
-                    <Input 
-                      id="password" 
-                      type="password" 
-                      value={loginData.password}
-                      onChange={handleLoginChange}
-                      required 
-                    />
+                    <Input id="password" type="password" required />
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="rememberMe" 
-                      checked={loginData.rememberMe}
-                      onCheckedChange={(checked) => 
-                        setLoginData(prev => ({ ...prev, rememberMe: checked === true }))}
-                    />
+                    <Checkbox id="remember" />
                     <label
-                      htmlFor="rememberMe"
+                      htmlFor="remember"
                       className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
                       Remember me
@@ -299,89 +158,30 @@ const Login = () => {
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">First name</Label>
-                      <Input 
-                        id="firstName" 
-                        value={signupData.firstName}
-                        onChange={handleSignupChange}
-                        required 
-                      />
+                      <Label htmlFor="first-name">First name</Label>
+                      <Input id="first-name" required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Last name</Label>
-                      <Input 
-                        id="lastName" 
-                        value={signupData.lastName}
-                        onChange={handleSignupChange}
-                      />
+                      <Label htmlFor="last-name">Last name</Label>
+                      <Input id="last-name" required />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="username">Username</Label>
-                    <Input 
-                      id="username" 
-                      value={signupData.username}
-                      onChange={handleSignupChange}
-                      required 
-                      placeholder="Choose a unique username"
-                      className={errors.username ? "border-red-500" : ""}
-                    />
-                    {errors.username && (
-                      <p className="text-sm text-red-500">{errors.username}</p>
-                    )}
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input id="signup-email" type="email" placeholder="name@example.com" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="name@example.com" 
-                      value={signupData.email}
-                      onChange={handleSignupChange}
-                      required 
-                      className={errors.email ? "border-red-500" : ""}
-                    />
-                    {errors.email && (
-                      <p className="text-sm text-red-500">{errors.email}</p>
-                    )}
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input id="signup-password" type="password" required />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input 
-                      id="password" 
-                      type="password" 
-                      value={signupData.password}
-                      onChange={handleSignupChange}
-                      required 
-                      className={errors.password ? "border-red-500" : ""}
-                    />
-                    {errors.password && (
-                      <p className="text-sm text-red-500">{errors.password}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Password must contain at least one lowercase letter, one uppercase letter, and one number.
-                    </p>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <Checkbox 
-                      id="agreeToTerms" 
-                      required
-                      checked={signupData.agreeToTerms}
-                      onCheckedChange={(checked) => 
-                        setSignupData(prev => ({ ...prev, agreeToTerms: checked === true }))}
-                      className={errors.terms ? "border-red-500" : ""}
-                    />
-                    <div>
-                      <label
-                        htmlFor="agreeToTerms"
-                        className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
-                      </label>
-                      {errors.terms && (
-                        <p className="text-xs text-red-500 mt-1">{errors.terms}</p>
-                      )}
-                    </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="terms" required />
+                    <label
+                      htmlFor="terms"
+                      className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+                    </label>
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Creating Account...' : 'Create Account'}

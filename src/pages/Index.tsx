@@ -2,42 +2,21 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import ProjectCard from '@/components/ProjectCard';
 import Footer from '@/components/Footer';
+import { projects } from '@/data/projects';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  image: string;
-  tags: string[];
-  is_premium: boolean;
-}
 
 const Index = () => {
-  // Fetch featured projects from Supabase
-  const { data: featuredProjects, isLoading } = useQuery({
-    queryKey: ['featuredProjects'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, title, description, image, tags, is_premium')
-        .limit(3);
-      
-      if (error) throw error;
-      return data as Project[];
-    },
-  });
-
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Featured projects (take the first 3)
+  const featuredProjects = projects.slice(0, 3);
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,29 +41,19 @@ const Index = () => {
               </p>
             </motion.div>
             
-            {isLoading ? (
-              <div className="flex justify-center items-center py-16">
-                <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
-              </div>
-            ) : featuredProjects && featuredProjects.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuredProjects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    id={project.id}
-                    title={project.title}
-                    description={project.description}
-                    image={project.image}
-                    tags={project.tags}
-                    isPremium={project.is_premium}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-16">
-                <p className="text-muted-foreground">No featured projects found</p>
-              </div>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  title={project.title}
+                  description={project.description}
+                  image={project.image}
+                  tags={project.tags}
+                  isPremium={project.isPremium}
+                />
+              ))}
+            </div>
             
             <div className="mt-12 text-center">
               <Button asChild className="group">
